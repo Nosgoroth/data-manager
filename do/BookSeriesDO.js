@@ -659,7 +659,7 @@
 					context: "bookseries",
 					action: isNaN(w) ? "echo" : "thumb",
 					url: url,
-					path: "amazoncovers\\"+md5(asin)+".jpg",
+					path: "amazoncovers/"+md5(asin)+".jpg",
 					w: w,
 					maxage: 60*60*24*7
 				};

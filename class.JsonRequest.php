@@ -29,7 +29,7 @@ class JsonRequestDomain extends JsonRequest {
 	}
 
 	protected function setDomain($domain) {
-		$domain = preg_replace("/[^\d\w-_]*/", "", strtolower($domain));
+		$domain = preg_replace("/[^\d\w\-_]*/", "", strtolower($domain));
 		$this->setFilename("_data/data_".$domain.".json");
 	}
 }

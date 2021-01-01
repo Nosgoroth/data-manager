@@ -24,11 +24,13 @@ ehthumbs_vista.db
 
 # PROJECT SPECIFICS
 
-thumb/amazoncovers/*.jpg
+thumb/*/
+!thumb/*/amazoncovers/
+thumb/*/*.jpg
 _data/*.json
 wepubjnc.*
 bookpreordercalendar.php
-bookseriesical.php
+bookseriescal.php
 bookbacklog.php
 login.php
 test.php

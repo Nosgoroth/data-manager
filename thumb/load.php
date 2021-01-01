@@ -26,4 +26,4 @@ function download_file($url, $file, $context = null) {
 
 require_once( dirname(__FILE__). "/ThumbManager.php");
 
-$TM = new ThumbManager( 'C:\\wamp\\cache\\thumb\\' );
+$TM = new ThumbManager( '.' );

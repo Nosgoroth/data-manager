@@ -1,4 +1,4 @@
-<?
+<?php
 
 include('SimpleImage.php');
 
@@ -36,7 +36,7 @@ class ThumbManager {
         if (!$context) { $context = 'generic'; }
         $context = strtolower($context);
         
-        $contextdir = $this->thumbdir.'\\'.$context.'\\';
+        $contextdir = $this->thumbdir.DIRECTORY_SEPARATOR.$context.DIRECTORY_SEPARATOR;
         if (!is_dir($contextdir)) {
             mkdir($contextdir, 0777, true);
         }
@@ -53,7 +53,7 @@ class ThumbManager {
         if (!$context) { $context = 'generic'; }
         $context = strtolower($context);
         
-        $contextdir = $this->thumbdir.'\\'.$context.'\\';
+        $contextdir = $this->thumbdir.DIRECTORY_SEPARATOR.$context.DIRECTORY_SEPARATOR;
         if (!is_dir($contextdir)) {
             mkdir($contextdir, 0777, true);
         }
