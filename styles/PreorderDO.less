@@ -1,0 +1,57 @@
+#app .adoe_container[data-type="Preorder"]{
+
+	.dataObjectField[data-typename=name] {
+		font-weight: bold;
+	}
+
+	//Announced
+	 .dataObjectItem[data-fieldvalue-status="1"] {
+	}
+	 .dataObjectItem[data-fieldvalue-status="9"] {
+		background: #e8f6fd;
+	}
+	//Preorder open
+	.dataObjectItem[data-fieldvalue-status="2"] {
+		background: #FFDEDE;
+	}
+	//Ordered
+	.dataObjectItem[data-fieldvalue-status="3"] {
+		background: #F9FFDB;
+	}
+	//Paid, shipped
+	.dataObjectItem[data-fieldvalue-status="4"],
+	.dataObjectItem[data-fieldvalue-status="5"] {
+		background: #E2FFDB;
+	}
+	//Received, released, out of print
+	.dataObjectItem[data-fieldvalue-status="6"],
+	.dataObjectItem[data-fieldvalue-status="7"],
+	.dataObjectItem[data-fieldvalue-status="8"] {
+		color: #999;
+		background: #F4F4F4;
+	}
+	//Inactive types,
+	.hide-inactive .dataObjectItem[data-fieldvalue-status="6"],
+	.hide-inactive .dataObjectItem[data-fieldvalue-status="7"],
+	.hide-inactive .dataObjectItem[data-fieldvalue-status="8"] {
+		display: none;
+	}
+	//Announced types
+	.hide-announced .dataObjectItem[data-fieldvalue-status="1"],
+	.hide-announced .dataObjectItem[data-fieldvalue-status="9"] {
+		display: none;
+	}
+
+
+	.mfcThumbnail {
+		display: inline-block;
+		width: 35px;
+		height: 45px;
+		margin-right: 7px;
+    	vertical-align: middle;
+		background: url() center center / contain no-repeat transparent;
+	}
+
+}
+
+

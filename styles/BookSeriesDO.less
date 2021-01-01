@@ -1,0 +1,655 @@
+#app .adoe_container[data-type="BookSeries"] {
+
+	#topRow {
+		clear: both;
+
+		& > * {
+			margin-right: 12px;
+		}
+	}
+
+
+	.bookSeriesVolume {
+		display: block;
+		width: 40px;
+		float: left;
+		margin-right: 2px;
+		position: relative;
+
+		.coverContainer {
+			display: block;
+			position: relative;
+			height: 55px;
+			border: 1px solid transparent;
+			box-sizing: border-box;
+
+			.colorder {
+				position: absolute;
+				top: 2px;
+				left: 2px;
+				color: #333;
+				background: white;
+				border-bottom-right-radius: 3px;
+				font-size: 9px;
+				text-align: center;
+				font-weight: normal;
+				line-height: 100%;
+				padding: 1px 2px 2px 1px;
+			}
+
+			.cover {
+				display: block;
+				height: 100%;
+				background: url() center center / cover no-repeat transparent;
+				border: 2px solid transparent;
+				box-sizing: border-box;
+			}
+		}
+		.notes {
+			display: block;
+			font-size: 9px;
+			text-align: center;
+			font-weight: normal;
+			height: 11px;
+			overflow: hidden;
+			line-height: 100%;
+		}
+
+		.dropdown-menu {
+			&:before {
+				position: absolute;
+				top: -7px;
+				left: 9px;
+				display: inline-block;
+				border-right: 7px solid transparent;
+				border-bottom: 7px solid #ccc;
+				border-left: 7px solid transparent;
+				border-bottom-color: rgba(0, 0, 0, 0.2);
+				content: '';
+			}
+			&:after {
+				position: absolute;
+				top: -6px;
+				left: 10px;
+				display: inline-block;
+				border-right: 6px solid transparent;
+				border-bottom: 6px solid #ffffff;
+				border-left: 6px solid transparent;
+				content: '';
+			}
+		}
+
+		&[data-status="1"] .coverContainer { //Read
+			// opacity: 0.7;
+		}
+		&[data-status="2"] .coverContainer { //Backlog
+			@color: #ff982e;
+			border-color: @color;
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+		&[data-status="3"] .coverContainer { //Preorder
+			@color: #38d481;
+			border-color: #a0ff88;
+			filter: blur(5);
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+		&[data-status="4"] .coverContainer { //TPB
+			@color: #d843aa;
+			border-color: @color;
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+		&[data-status="5"] .coverContainer { //None
+			//opacity: 0.7;
+			@color: #AAAAAA;
+			border-color: @color;
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+		&[data-status="6"] .coverContainer { //Source
+			@color: #6143DB;
+			border-color: @color;
+			filter: blur(5);
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+		&[data-status="7"] .coverContainer { //Available
+			@color: #91d09a;
+			border-color: @color;
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+		&[data-status="8"] .coverContainer { //StoreWait
+			@color: #63dae0;
+			border-color: @color;
+			.colorder { background: @color; color: white; }
+			.cover { border-color: @color; }
+		}
+
+		/*
+		.coverContainer {
+			.colorder {
+				z-index: 1000;
+				font-size: 4px;
+			}
+		}
+		&[data-status="3"], &[data-status="6"] {
+			.coverContainer .cover {
+				filter: blur(2px);
+			}
+		}
+		*/
+
+		//Inset colorder
+		&[data-status="2"],
+		&[data-status="3"],
+		&[data-status="4"] {
+			.coverContainer .colorder {
+				top: 1px; left: 1px;
+				padding: 1px 3px 3px 1px;
+			}
+		}
+	}
+
+
+	.dataObjectItem.volumesRow {
+		td {
+			border-top-width: 0;
+			padding-top: 0;
+		}
+		.seriesend {
+		    display: block;
+		    float: left;
+		    border-left: 1px solid #333;
+		    height: 50px;
+		    border-right: 1px solid #666;
+		    margin-left: 3px;
+		    width: 1px;
+		}
+	}
+	.hide-volumes .dataObjectItem.volumesRow {
+		display: none;
+	}
+	.hide-volume-inforow .dataObjectItem.infoRow {
+		display: none;
+	}
+	.hide-volume-inforow .dataObjectItem.volumesRow {
+		td {
+			border-top-width: 1px;
+			padding-top: 4px;
+		}
+	}
+
+	.dataObjectItem.futureSeparator {
+		border-top: 3px solid #E00;
+	}
+
+
+	.dataObjectField[data-typename="publisher"] {
+		.publisherLink {
+			color: rgb(51, 51, 51);
+		}
+	}
+	
+	.dataObjectField[data-typename="lastupdate"],
+	.dataObjectField[data-typename="lastcheck"] {
+		.checkedAgo {
+			font-size: 0.8em;
+
+			&.ago_long {
+				color: #D00;
+			}
+			&.ago_mid {
+				color: #E80;
+			}
+		}
+		.updateChecked {
+			margin-left: 4px;
+			float: right;
+		}
+	}
+
+
+	.dataObjectField[data-typename="notes"] {
+		.btn-group {
+			float: right;
+
+			.btn {
+				color: rgba(0,0,0, 0.5);
+				
+				&:hover {
+					text-decoration: none;
+				}
+			}
+			ul li a {
+				cursor: pointer;
+			}
+		}
+
+	}
+	.dataObjectField[data-typename="owned"] .volumes {
+		em {
+			font-size: 0.8em;
+			font-style: normal;
+		}
+		strong {
+			font-weight: bold;
+		}
+	}
+
+
+
+
+	thead tr th[data-field="preorder"] {
+		text-align: center;
+	}
+
+	.dataObjectField[data-typename=name] {
+		font-weight: bold;
+	}
+	.dataObjectField[data-typename="preorder"] {
+		font-size: 0.9em;
+		opacity: 0.66;
+		text-align: center;
+	}
+	.dataObjectItem[data-fieldvalue-preorder="true"]{
+		.dataObjectField[data-typename="preorder"] {
+			font-size: 1.2em;
+			opacity: 1;
+		}
+	}
+
+	tfoot.filters th[data-field="preorder"] {
+		text-align: center;
+	}
+
+
+	/*Up to date*/
+	.dataObjectItem[data-fieldvalue-status="1"] {
+		background: #E2FFDB;
+
+		&.nextNotOwnedVolumeIsSource {
+			background: #d9efdc;
+		}
+	}
+	.hide-up-to-date .dataObjectItem[data-fieldvalue-status="1"],
+	.hide-up-to-date .dataObjectItem[data-fieldvalue-status="3"],
+	.hide-up-to-date .dataObjectItem[data-fieldvalue-status="7"]
+	{
+		display: none;
+	}
+	/*Available*/
+	.dataObjectItem[data-fieldvalue-status="6"] {
+		background: #FAE3BB;
+	}
+	/*Stalled*/
+	.dataObjectItem[data-fieldvalue-status="7"] {
+		background: #f4ffeb;
+	}
+	/*Announced*/
+	.dataObjectItem[data-fieldvalue-status="8"] {
+		background: #dcf1fb;
+	}
+	/*Backlog*/
+	.dataObjectItem[data-fieldvalue-status="2"]{
+		background: #FFFFBB;
+	}
+	/*Consider*/
+	.dataObjectItem[data-fieldvalue-status="5"] {
+		background: #EBE3FF;
+	}
+	.hide-considering .dataObjectItem[data-fieldvalue-status="5"] {
+		display: none;
+	}
+	/*Pending preorder*/
+	.dataObjectItem[data-fieldvalue-status="1"][data-fieldvalue-preorder="true"] {
+		background: #38d481;
+		color: white;
+		&:hover > td {
+			background-color: rgba(0,0,0,0.25);
+		}
+		.publisherLink {
+			color: white;
+		}
+		.dataObjectField[data-typename="owned"] .own-button {
+			color: rgba(255,255,255,0.5);
+		}
+	}
+	.hide-up-to-date-preordered .dataObjectItem[data-fieldvalue-status="1"][data-fieldvalue-preorder="true"] {
+		display: none;
+	}
+	
+	/*Inactive*/
+	.dataObjectItem[data-fieldvalue-status="3"],
+	.dataObjectItem[data-fieldvalue-status="4"] {
+		color: #999;
+		background: #F4F4F4;
+		.publisherLink {
+			color: #999;
+		}
+	}
+	/*Finished*/
+	.dataObjectItem[data-fieldvalue-status="3"] {
+		background: #e9f3e9;
+	}
+	/*Dropped*/
+	.dataObjectItem[data-fieldvalue-status="4"] {
+		background: #fff6f6;
+	}
+
+	.hide-inactive .dataObjectItem[data-fieldvalue-status="3"],
+	.hide-inactive .dataObjectItem[data-fieldvalue-status="4"] {
+		display: none;
+	}
+	.hide-stalled .dataObjectItem[data-fieldvalue-status="7"] {
+		display: none;
+	}
+	.hide-unlicensed .dataObjectItem[data-fieldvalue-status="9"] {
+		display: none;
+	}
+	.hide-prepub .dataObjectItem[data-fieldvalue-status="10"] {
+		display: none;
+	}
+
+	.hide-preorder .dataObjectItem[data-fieldvalue-preorder="true"] {
+		display: none;
+	}
+	.hide-no-preorder .dataObjectItem[data-fieldvalue-preorder="false"] {
+		display: none;
+	}
+
+	.hide-unreleased .dataObjectItem[data-fieldvalue-status="8"] {
+		display: none;
+	}
+
+
+
+
+
+
+
+
+
+
+	.bookSeriesTiles {
+		.bookSeriesTilesBacklog,
+		.bookSeriesTilesMonth {
+			h3 {
+				border-bottom: 1px solid rgba(0,0,0,0.3)
+			}
+			ul.monthTiles, ul.tiles {
+				list-style: none;
+
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+				grid-gap: 20px;
+				justify-content: space-between;
+
+				margin: 0;
+				padding: 5px 0;
+
+				&::after {
+					content: "";
+					flex: auto;
+				}
+
+				li.bookSeriesVolumeTile {
+					.content {}
+				}
+			}
+		}
+		.bookSeriesTilesMonthGap {
+			opacity: 0.6;
+		}
+	}
+	.bookSeriesVolumeTile {
+
+		min-width: 250px;
+		height: 200px;
+		width: 100%;
+		background: green;
+
+
+		.content {
+			position: relative;
+			background: #F0F0F0;
+			//box-shadow: 0 0 2px rgba(0,0,0,0.3);
+
+			background: red;
+
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-flow: row nowrap;
+
+			.cover {
+				width: 137px;
+				height: 100%;
+				background: url() center center / cover no-repeat #ececec;
+			}
+			.dataContent {
+				width: ~"calc(100% - 137px)";
+				overflow: hidden;
+				flex-grow: 1;
+				
+			    padding: 5px;
+			    box-sizing: border-box;
+				text-align: right;
+
+				.title {
+					font-weight: bold;
+				}
+				.statusContainer {
+					.status {
+						font-size: 0.75em;
+						background: #444;
+						display: inline-block;
+						padding: 4px 6px;
+						color: white;
+						border-radius: 8px;
+						line-height: 100%;
+					}
+					font-size: 0.85em;
+				}
+				.releaseDate {
+					position: absolute;
+					bottom: 5px;
+					right: 5px;
+					margin: 0;
+					font-size: 0.85em;
+					line-height: 100%;
+				}
+			}
+			.dropdown-menu {
+			    top: 10px;
+			    left: 10px;
+			    right: 10px;
+			}
+		}
+
+
+		&[data-status="3"] .content { //Preorder
+			background: #e0ffe3;
+			.statusContainer .status {
+				background: #18b118;
+			}
+		}
+		&[data-status="3"][data-parentstatus="2"] .content { //Preorder, series is backlogged
+			background: #fcffd6;
+		}
+		&[data-status="4"] .content { //TPB
+			background: #ffdcf4;
+			.statusContainer .status {
+				background: #d843aa;
+			}
+
+			
+		}
+		&[data-status="5"] .content { //None
+			//opacity: 0.7;
+		}
+		&[data-status="6"] .content { //Source
+			background: #e2dbff;
+		}
+
+		&[data-parentstatus="5"] .content, //Consider
+		&[data-parentstatus="8"] .content { //Announced
+			//opacity: 0.7;
+		}
+	}
+
+	//preorder #e0ffe3
+
+
+
+
+
+
+
+	.pubgraphPopup {
+		background: white;
+		padding: 8px;
+
+		h3 {
+			text-align: center;
+			em {
+				
+				display: inline-block;
+				margin-left: 8px;
+
+				font-style: normal;
+				font-size: 0.7em;
+				opacity: 0.7;
+			}
+		}
+
+		& > button {
+			margin: 10px auto 0px;
+    		display: block;
+		}
+
+		#pubgraphContainer {
+
+		}
+	}
+
+
+
+}
+
+
+
+
+
+
+
+
+@media (prefers-color-scheme: dark) {
+	#app .adoe_container[data-type="BookSeries"] {
+
+		.pubgraphPopup {
+			color: #333;
+		}
+
+		.dataObjectItem.futureSeparator {
+			border-top: 3px solid #ff1f1f;
+		}
+
+		.dataObjectItem {
+			color: #F7F7F7;	
+			.dataObjectField[data-typename="publisher"] .publisherLink {
+				color: white;
+			}
+		}
+		
+		.dataObjectItem[data-fieldvalue-status="1"] {
+			background: #177400;
+
+			&.nextNotOwnedVolumeIsSource {
+				background: #177400;
+			}
+		}
+		/*Backlog*/
+		.dataObjectItem[data-fieldvalue-status="2"]{
+			background: #ab5102;
+		}
+		/*Finished*/
+		.dataObjectItem[data-fieldvalue-status="3"] {
+			background: #335e33;
+		}
+		/*Dropped*/
+		.dataObjectItem[data-fieldvalue-status="4"] {
+			background: #430000;
+		}
+		/*Inactive*/
+		.dataObjectItem[data-fieldvalue-status="3"],
+		.dataObjectItem[data-fieldvalue-status="4"] {
+			color: #bdbdbd;
+			.publisherLink {
+				color: #bdbdbd;
+			}
+		}
+		/*Consider*/
+		.dataObjectItem[data-fieldvalue-status="5"] {
+			background: #460061;
+		}
+		/*Available*/
+		.dataObjectItem[data-fieldvalue-status="6"] {
+			background: #5a893f;
+		}
+		/*Stalled*/
+		.dataObjectItem[data-fieldvalue-status="7"] {
+			background: #007c53;
+		}
+		/*Announced*/
+		.dataObjectItem[data-fieldvalue-status="8"] {
+			background: #0a3e57;
+		}
+		/*Unlicensed*/
+		.dataObjectItem[data-fieldvalue-status="9"] {
+			background: #272727;
+		}
+		/*Prepub*/
+		.dataObjectItem[data-fieldvalue-status="10"] {
+			background: #2f2fc1;
+		}
+
+		/*Pending preorder*/
+		.dataObjectItem[data-fieldvalue-status="1"][data-fieldvalue-preorder="true"] {
+			background: #27b469;
+			color: white;
+			&:hover > td {
+				background-color: rgba(0,0,0,0.25);
+			}
+			.dataObjectField[data-typename="owned"] .own-button {
+				color: rgba(255,255,255,0.5);
+			}
+		}
+		.hide-up-to-date-preordered .dataObjectItem[data-fieldvalue-status="1"][data-fieldvalue-preorder="true"] {
+			display: none;
+		}
+
+		
+
+
+		.bookSeriesVolumeTile {
+			.content {
+				background: #4a4a4a;
+			}
+			&[data-status="3"] .content { //Preorder
+				background: #27b469;
+			}
+			&[data-status="3"][data-parentstatus="2"] .content { //Preorder, series is backlogged
+				background: #942e00;
+			}
+			&[data-status="4"] .content { //TPB
+				background: #84005b;
+			}
+			&[data-status="6"] .content { //Source
+				background: #004adb;
+			}
+		}
+	}
+}

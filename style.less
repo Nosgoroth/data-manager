@@ -1,0 +1,193 @@
+
+/*---------------------
+ *-- GENERIC STYLES --*
+ ---------------------*/
+
+body {
+	padding: 0 !important;
+	
+	& > .container {
+		width: auto;
+		margin: 0 16px;
+	}
+}
+
+html, body {
+	height: 100%;
+}
+body > .container {
+	height: 100%;
+}
+
+#app {
+	min-height: 100%;
+}
+
+#app {
+	padding-bottom: 30px;
+	overflow-x: hidden;
+	overflow-y: visible;
+
+	header select {
+		float: right;
+		margin-top: 8px;
+	}
+
+	.btn-type-selector {
+		display: block;
+		margin: 0 auto 10px;
+		min-width: 200px;
+	}
+
+	.tableContainer {
+
+		thead tr th.selected {
+			background: #333;
+			color: #EEE;
+		}
+		.dataObjectItem {
+			background: #F9F9F9;
+			td {
+				vertical-align: middle;
+			}
+			&.filter-hidden {
+				display: none;
+			}
+		}
+		.table-hover tbody tr:hover>td, .table-hover tbody tr:hover>th {
+		    background-color: rgba(255,255,255,0.4);
+		}
+
+		tfoot {
+			tr th {
+				background: #333;
+				color: #AAA;
+				position: relative;
+				font-weight: normal;
+
+				&.filtering {
+					color: #EEE;
+					font-weight: bold;
+				}
+
+				select {
+					opacity: 0.01;
+					margin: 0;
+					padding: 0;
+					position: absolute;
+					left: 0;
+					top: 0;
+					right: 0;
+					bottom: 0;
+				}
+				.selectval {
+					display: block;
+					pointer-events: none;
+					white-space: nowrap;
+				}
+				/*
+				select {
+					width: auto;
+					height: auto;
+					-moz-appearance: none;
+					-webkit-appearance: none;
+					appearance: none;
+					border: 0;
+					text-align: center;
+					text-align: -webkit-center;
+					line-height: 100%;
+					height: auto;
+					padding: 0;
+					margin: 0;
+					background: none;
+					border-radius: 0;
+
+					font-size: 0.9em;
+					line-height: 120%;
+					color: #EEE;
+
+				}
+				*/
+			}
+		}
+
+	}
+
+	.actionsContainer {
+		.btn {
+			margin-right: 10px;
+		}
+	}
+
+	.formContainer {
+		padding: 50px 10px 0 10px;
+		position: fixed;
+		top: 0; bottom: 0;
+		left: 0; right: 0;
+		background: rgba(0,0,0,0.6);
+		overflow: scroll;
+
+		form {
+			margin: 0 auto;
+			background: #F7F7F7;
+			/* border: 1px solid #CCC; */
+			padding: 15px 20px;
+			max-width: 480px;
+			text-align: center;
+			-webkit-columns: 2;
+			columns: 2;
+			-webkit-column-gap: 30px;
+			column-gap: 30px;
+
+			.dataObjectFormItem {
+				display: block;
+			
+				&[data-formtype="checkbox"] input {
+				    display: inline-block;
+				    vertical-align: middle;
+				    margin-top: 0;
+				}
+				&[data-formtype="checkbox"] label {
+				    display: inline-block;
+				    vertical-align: middle;
+				    margin-left: 5px;
+				}
+			}
+
+			.btn {
+				margin-right: 10px;
+			}
+		}
+	}
+}
+
+
+
+@media (prefers-color-scheme: dark) {
+	html, body {
+		background: black;
+		color: #DDD;
+		a {
+			color: #FFF;
+		}
+	}
+	#app {
+		.tableContainer {
+			thead tr th.selected {
+				background: #848dc8;
+				color: #fff;
+			}
+
+			.table th, .table td {
+				border-color: #555;
+			}
+		}
+		.formContainer {
+			background: rgba(0,0,0,0.8);
+			form {
+				background: #333;
+			}
+		}
+	}
+	
+}
