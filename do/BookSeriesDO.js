@@ -472,6 +472,14 @@
 				return !(this.getImageAsin() || this.getAsin());
 			},
 
+			getBestPurchasedDateMoment: function() {
+				return this.getPurchasedDateMoment() ?? this.getBestReleaseDateMoment();
+			},
+
+			getBestReadDateMoment: function() {
+				return this.getReadDateMoment() ?? this.getBestReleaseDateMoment();
+			},
+
 
 			getPubDatesFromAsins: function(complete) {
 				complete = complete ? complete : function(){};
@@ -1338,6 +1346,22 @@
 			sortByReleaseDate: function(volumesCOL, reverse) {
 				volumesCOL.sort(function(aDO, bDO){
 					return aDO.getBestReleaseDateMoment() - bDO.getBestReleaseDateMoment();
+				});
+				if (reverse) {
+					volumesCOL.reverse();
+				}
+			},
+			sortByPurchasedDate: function(volumesCOL, reverse) {
+				volumesCOL.sort(function(aDO, bDO){
+					return aDO.getBestPurchasedDateMoment() - bDO.getBestPurchasedDateMoment();
+				});
+				if (reverse) {
+					volumesCOL.reverse();
+				}
+			},
+			sortByReadDate: function(volumesCOL, reverse) {
+				volumesCOL.sort(function(aDO, bDO){
+					return aDO.getBestReadDateMoment() - bDO.getBestReadDateMoment();
 				});
 				if (reverse) {
 					volumesCOL.reverse();
@@ -2430,6 +2454,8 @@
 
 			_tileRenderBacklog: function(){
 
+				const limit = 80;
+
 				var $container = jQuery('<div class="bookSeriesTiles">');
 
 				var BSEnumStatus = BookSeriesDO.Enum.Status;
@@ -2459,11 +2485,65 @@
 				});
 				volumesCOL = BookSeriesVolumeDO.COL(volumesCOL);
 				
-				BookSeriesVolumeDO.sortByReleaseDate(volumesCOL, true);
+				BookSeriesVolumeDO.sortByPurchasedDate(volumesCOL, true);
+
+				volumesCOL = volumesCOL.slice(0, limit);
 
 				var $backlog = $container.appendR('<div class="bookSeriesTilesBacklog">');
 				$backlog.appendR('<h3>').text("Volumes in backlog");
-				$backlog.appendR('<small>').text("Most recent first, only volumes with a release date registered");
+				$backlog.appendR('<small>').text(limit + " most recent first, only volumes with a purchase or release date registered");
+				var $tiles = $backlog.appendR('<ul class="tiles">');
+				
+				volumesCOL.forEach(function(volumeDO){
+					$tiles.appendR(volumeDO.renderTile({
+						releaseDateLong: true
+					}));
+				});
+
+
+				this.$container.empty().append($container);
+			},
+
+
+
+
+			_tileRenderRead: function(){
+
+				const limit = 40;
+
+				var $container = jQuery('<div class="bookSeriesTiles">');
+
+				var BSEnumStatus = BookSeriesDO.Enum.Status;
+				var BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+
+				var volumesCOL = [];
+				this._COL.forEach(function(bookSeriesDO){
+
+					var status = bookSeriesDO.getStatus();
+
+					var seriesVolumesCOL = bookSeriesDO.getVolumes();
+
+					seriesVolumesCOL.forEach(function(volumeDO){
+						if (!volumeDO.hasReleaseDate()) {
+							return;
+						}
+						var volstatus = volumeDO.getStatus();
+						if (![BSVEnumStatus.Read].includes(volstatus)) {
+							return;
+						}
+						volumesCOL.push(volumeDO);
+					});
+
+				});
+				volumesCOL = BookSeriesVolumeDO.COL(volumesCOL);
+				
+				BookSeriesVolumeDO.sortByReadDate(volumesCOL, true);
+
+				volumesCOL = volumesCOL.slice(0, limit);
+
+				var $backlog = $container.appendR('<div class="bookSeriesTilesBacklog">');
+				$backlog.appendR('<h3>').text("Volumes read");
+				$backlog.appendR('<small>').text(limit+" most recent volumes first, only volumes with a read or release date registered.");
 				var $tiles = $backlog.appendR('<ul class="tiles">');
 				
 				volumesCOL.forEach(function(volumeDO){
@@ -2492,6 +2572,9 @@
 					case "volumetiles_backlog":
 						this._tileRenderBacklog();
 						break;
+					case "volumetiles_read":
+						this._tileRenderRead();
+						break;
 				}
 
 				var $topRow = this.$container.prependR('<div id="topRow">');
@@ -2502,6 +2585,7 @@
 						.append('<option value="table">Table</option>')
 						.append('<option value="volumetiles_upcoming">Upcoming volumes</option>')
 						.append('<option value="volumetiles_backlog">Latest backlog</option>')
+						.append('<option value="volumetiles_read">Latest read</option>')
 					.val(renderMode)
 					.on('change', function(){
 						this.setExtraValue("rendermode", $rendermode.val());
