@@ -849,6 +849,17 @@
 
 				return $ctr;
 			},
+
+			getFullName: function() {
+				const title = this.parent.getName();
+				const orderLabel = this.getCollectionOrderLabel();
+				if (orderLabel !== "-") {
+					return title + ", Vol. " + orderLabel;
+				} else {
+					return title;
+				}
+			},
+
 			renderTile: function(options) {
 				options = populateDefaultOptions(options, {
 					container: '<li>',
@@ -881,10 +892,7 @@
 
 				$dataContent = $content.appendR('<div class="dataContent">');
 
-				var title = seriesname;
-				if (orderLabel !== "-") {
-					title += ", Vol. "+orderLabel;
-				}
+				var title = this.getFullName();
 
 				$dataContent.appendR('<p class="title">').text(title);
 

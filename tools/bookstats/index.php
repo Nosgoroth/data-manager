@@ -32,19 +32,31 @@ if (file_exists('../../login.php')) {
 
 	<h2>Book stats</h2>
 
-	<p><small>Before 2021, bought books are assumed to be bought upon release, and read books read upon purchase.</small></p>
+	<p><small>Unless otherwise specified, bought books are assumed to be bought upon release, and read books read upon purchase.</small></p>
 
 	<hr/>
 
 	<div id="book-stats-summary-app"></div>
 
-	<h3>By year</h3>
-
-	<div id="book-stats-year-app"></div>
-
 	<h3>By month</h3>
 
-	<div id="book-stats-month-app"></div>
+	<p><small>Graph shows last 18 months</small></p>
+
+	<div id="book-stats-graph-month"></div>
+
+	<br/>
+
+	<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-month-app">Show data table</button>
+	<div id="book-stats-month-app" class="collapse"></div>
+
+	<h3>By year</h3>
+
+	<div id="book-stats-graph-year"></div>
+
+	<br/>
+
+	<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-year-app">Show data table</button>
+	<div id="book-stats-year-app" class="collapse"></div>
 
 </div>
 
@@ -55,6 +67,8 @@ if (file_exists('../../login.php')) {
 <script async src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.min.js"></script>
 <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.18.0/js/md5.min.js'></script>
 <script src="//cdn.jsdelivr.net/npm/less@3.13" ></script>
+<script async src="https://code.highcharts.com/highcharts.src.js"></script>
+<script async src="https://code.highcharts.com/themes/high-contrast-dark.js"></script>
 
 <!-- DOOP -->
 <script type='text/javascript' src='../../res/doop/oop.js'></script>

@@ -1,4 +1,118 @@
 
+
+function instanceGraph(dateCols) {
+
+
+	const boughtDataYear = dateCols.bought.getGraphPointsByYear();
+	const readDataYear = dateCols.read.getGraphPointsByYear();
+
+
+	Highcharts.chart(jQuery("#book-stats-graph-year").get(0), {
+	    chart: { type: 'spline', backgroundColor: "#000000" },
+	    title: { text: '' },
+	    xAxis: {
+	        type: 'datetime',
+	        dateTimeLabelFormats: {
+	            month: '%b %y',
+	            year: '%Y'
+	        },
+	        // title: { text: 'Date' },
+	    },
+	    yAxis: {
+	        title: { text: 'Volumes' },
+	        min: 0,
+	        allowDecimals: false
+	    },
+	    tooltip: {
+	        headerFormat: "",
+	        // pointFormat: '{point.items}'
+	    },
+	    plotOptions: {
+	        spline: {
+	            marker: {
+	                enabled: true
+	            }
+	        }
+	    },
+	    series: [{
+	        name: "Bought",
+	        color: "#FF0021",
+	        data: boughtDataYear,
+	        dataLabels: {
+	        	enabled: true,
+	        	format: "{point.y}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        }
+	    }, {
+	        name: "Read",
+	        color: "#178246",
+	        data: readDataYear,
+	        dataLabels: {
+	        	enabled: true,
+	        	format: "{point.y}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        }
+	    }]
+	});
+
+
+
+	const cutoff = moment().subtract(18, 'month').unix() * 1000;
+
+	const boughtDataMonth = dateCols.bought.getGraphPointsByMonth().filter(p => p.x > cutoff);
+	const readDataMonth = dateCols.read.getGraphPointsByMonth().filter(p => p.x > cutoff);
+
+	Highcharts.chart(jQuery("#book-stats-graph-month").get(0), {
+	    chart: { type: 'spline', backgroundColor: "#000000" },
+	    title: { text: '' },
+	    xAxis: {
+	        type: 'datetime',
+	        dateTimeLabelFormats: {
+	            month: '%b %y',
+	            year: '%Y'
+	        },
+	        // title: { text: 'Date' },
+	    },
+	    yAxis: {
+	        title: { text: 'Volumes' },
+	        min: 0,
+	        allowDecimals: false
+	    },
+	    tooltip: {
+	        headerFormat: "",
+	        // pointFormat: '{point.items}'
+	    },
+	    plotOptions: {
+	        spline: {
+	            marker: {
+	                enabled: true
+	            }
+	        }
+	    },
+	    series: [{
+	        name: "Bought",
+	        color: "#FF0021",
+	        data: boughtDataMonth,
+	        dataLabels: {
+	        	enabled: true,
+	        	format: "{point.y}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        }
+	    }, {
+	        name: "Read",
+	        color: "#178246",
+	        data: readDataMonth,
+	        dataLabels: {
+	        	enabled: true,
+	        	format: "{point.y}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        }
+	    }]
+	});
+}
+
+
+
 function onlyUnique(value, index, self) {
   return self.indexOf(value) === index;
 }
@@ -17,9 +131,13 @@ function combineObjectValues(a, b, aKeyName, bKeyName){
 } 
 
 
-class CollectionIndex {
+class VolumeCollectionIndex {
 	constructor(){
 		this.index = {};
+		this.keyDates = {};
+	}
+	addKeyDate(key, date) {
+		this.keyDates[key] = date;
 	}
 	add(item, key) {
 		if (!this.index[key]) {
@@ -42,14 +160,42 @@ class CollectionIndex {
 	getCounts() {
 		return Object.fromEntries(this.getKeys().map(k => [k, this.getCountAtKey(k)]));
 	}
+	getLabelAtKey(key) {
+		try {
+			return this.index[key].map(x => x.getFullName() ).join("\n");
+		} catch(e) {
+			return null;
+		}
+	}
+	getDateAtKey(key) {
+		try {
+			return this.keyDates[key];
+		} catch(e) {
+			return null;
+		}
+	}
+	getGraphPointAtKey(key) {
+		const date = this.getDateAtKey(key);
+		const count = this.getCountAtKey(key);
+		const items = this.getLabelAtKey(key);
+		return {
+			x: (date?.unix() ?? 0) * 1000 + 60*60*12*1000,
+			y: count,
+			z: key,
+			items: items,
+		}
+	}
+	getGraphPoints() {
+		return this.getKeys().map(k => this.getGraphPointAtKey(k));
+	}
 }
 
 class VolumeCollectionByDate {
 	constructor(type) {
 		this._type = type;
 		this.volumes = [];
-		this.monthIndex = new CollectionIndex();
-		this.yearIndex = new CollectionIndex();
+		this.monthIndex = new VolumeCollectionIndex();
+		this.yearIndex = new VolumeCollectionIndex();
 	}
 	
 	add(volumeDO, _moment) {
@@ -58,8 +204,12 @@ class VolumeCollectionByDate {
 		const year = _moment.format('YYYY');
 
 		this.volumes.push(volumeDO);
+		
 		this.monthIndex.add(volumeDO, month);
+		this.monthIndex.addKeyDate(month, moment(_moment).startOf('month'));
+
 		this.yearIndex.add(volumeDO, year);
+		this.yearIndex.addKeyDate(year, moment(_moment).startOf('year'));
 	}
 
 	getMonthCounts() {
@@ -73,6 +223,12 @@ class VolumeCollectionByDate {
 	}
 	getCountAtYear(key) {
 		return this.yearIndex.getCountAtKey(key);
+	}
+	getGraphPointsByMonth() {
+		return this.monthIndex.getGraphPoints();
+	}
+	getGraphPointsByYear() {
+		return this.yearIndex.getGraphPoints();
 	}
 }
 
@@ -89,6 +245,9 @@ window.bookSeriesAjaxInterface = Object.extends({
 			read: new VolumeCollectionByDate('read'),
 			bought: new VolumeCollectionByDate('bought'),
 		};
+		try {
+			window.dateCols = dateCols;
+		} catch(e) {}
 		
 		this._COL.forEach(bookSeriesDO => {
 			const volumes = bookSeriesDO.getVolumes();
@@ -139,6 +298,10 @@ window.bookSeriesAjaxInterface = Object.extends({
 					`You read <strong>${boughtReadThisYearPercentage}%</strong> as many books as you bought this year. Last year it was ${boughtReadLastYearPercentage}%.`
 				)
 				;
+		}
+
+		{
+			instanceGraph(dateCols);
 		}
 
 		{
