@@ -335,6 +335,8 @@
 			preorderDate: "string", // DD/MM/YYYY
 			purchasedDate: "string", //DD/MM/YYYY
 			readDate: "string", //DD/MM/YYYY
+			//prepubStartDate: "string",
+			//prepubEndDate: "string",
 			mangaCalendarId: "string",
 			mangaCalendarEnabled: "boolean",
 			manualTpbKindleCheckOnly: "boolean",
@@ -380,6 +382,13 @@
 				});
 
 				this.nextVolumeDO = this.options.nextVolumeDO;
+			},
+
+			isOwned: function() {
+				return ([
+					BookSeriesVolumeDO.Enum.Status.Read,
+					BookSeriesVolumeDO.Enum.Status.Backlog
+				].indexOf(this.getStatus()) !== -1);
 			},
 
 			setNextVolume: function(nextVolumeDO){
@@ -2649,6 +2658,31 @@
 					;
 
 
+
+				const ownedNovelCount = BookSeriesDO.countOwnedVolumesOfSeriesType(BookSeriesDO.Enum.Type.Novel);
+				const ownedMangaCount = BookSeriesDO.countOwnedVolumesOfSeriesType(BookSeriesDO.Enum.Type.Manga);
+				const ownedOtherCount = BookSeriesDO.countOwnedVolumesOfSeriesType(BookSeriesDO.Enum.Type.Other);
+
+				var $progress = this.$container.appendR('<div class="progress">');
+				var total = ownedNovelCount + ownedMangaCount;
+
+				$progress.appendR('<div class="bar bar-danger">')
+					.text(ownedMangaCount)
+					.css("width",(100*ownedMangaCount/total)+"%")
+					;
+				$progress.appendR('<div class="bar bar-info">')
+					.text(ownedNovelCount)
+					.css("width",(100*ownedNovelCount/total)+"%")
+					;
+					/*
+				$progress.appendR('<div class="bar">')
+					.text(ownedOtherCount)
+					.css("width",(100*ownedOtherCount/total)+"%")
+					.css("background","#666")
+					;
+					*/
+
+
 				this.$container.appendR('<p>').html(
 					"<strong>%pre%</strong> series with active preorders, <strong>%backlog%</strong> backlogged, <strong>%utd%</strong> up to date."
 						.replace( "%pre%", stats.series.preorder )
@@ -3067,10 +3101,25 @@ BookSeriesDO.scrapePubDates = function(complete, actuallysave){
 	});
 }
 
+
+BookSeriesDO.countOwnedVolumesOfSeriesType = function(seriesType) {
+	return this.getAllSeries().filter(x => x.getType() === seriesType).reduce((x, y) => {
+	    const vols = y.getVolumes().filter(z => z.isOwned());
+	    return x + vols.length;
+	}, 0)
+}
+
+BookSeriesDO.getAllSeries = function() {
+	return window.customMultiDataObjectEditor._editor._COL;
+}
+
+BookSeriesDO.getAllVolumes = function() {
+	return this.getAllSeries().map(x => x.getVolumes()).flat();
+}
+
 BookSeriesDO.iterateAllSeries = function(callback) {
-	const bookSeriesCOL = window.customMultiDataObjectEditor._editor._COL;
 	let actuallysave = false;
-	bookSeriesCOL.forEach(function(bookSeriesDO){
+	this.getAllSeries().forEach(function(bookSeriesDO){
 		const saved = bookSeriesDO.processVolumes(function(volumesCOL){
 			return callback(bookSeriesDO, volumesCOL);
 		}, true);

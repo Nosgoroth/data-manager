@@ -1,5 +1,25 @@
 #app .adoe_container[data-type="BookSeries"] {
 
+	/*
+	.formContainer form {
+		-webkit-columns: 1;
+		columns: 1;
+		display: flex;
+		flex-flow: column wrap;
+		align-items: space-between;
+		justify-content: space-between;
+		max-height: 90vh;
+
+		.dataObjectFormItem {
+			max-width: 150px;
+			input, select {
+				width: 100%;
+				// box-sizing: border-box;
+			}
+		}
+	}
+	*/
+
 	#topRow {
 		clear: both;
 
@@ -648,6 +668,12 @@
 				background: #84005b;
 			}
 			&[data-status="6"] .content { //Source
+				//background: #004adb;
+			}
+			&[data-status="8"] .content { //Source
+				background: #58ace8;
+			}
+			&[data-parentstatus="10"] .content { //Prepub
 				background: #004adb;
 			}
 		}
