@@ -486,9 +486,12 @@ window.BookSeriesIssueItem = Object.extends({
 				;
 
 			for (var i = 1; i < actions.length; i++) {
-				this.generateDropdownActionItem(actions[i].label, null, () => {
-					window.open(actions[i].url, "_blank")
-				}).appendTo($dropdownActions);
+				let action = actions[i];
+				this.generateDropdownActionItem(
+					action.label,
+					null,
+					() => window.open(action.url, "_blank")
+				).appendTo($dropdownActions);
 			}
 		} else if (actions?.length) {
 			this.generateButton(
@@ -557,7 +560,7 @@ window.BookSeriesIssueItem = Object.extends({
 			$a.appendText(" ");
 		}
 		$a.appendText(label);
-		return $li ;
+		return $li;
 	},
 
 
