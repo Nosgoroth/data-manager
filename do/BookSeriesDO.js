@@ -1499,8 +1499,9 @@
 			volumes: "string",
 			morenotes: "string",
 			forcednotes: "string",
-			ignoreIssues: "boolean",
 			koboSeriesId: "string",
+			ignoreIssues: "boolean",
+			hasNoSource: "boolean",
 		},
 
 		extraPrototype: {
@@ -1717,7 +1718,8 @@
 				}
 
 				const graphData = this.getPublicationGraphData();
-				if (this.isSourceVolumeOverdue(graphData)) {
+				const hasNoSource = this.isHasNoSource();
+				if (this.isSourceVolumeOverdue(graphData) && !hasNoSource) {
 					return BookSeriesIssue.SourceVolumeOverdue;
 				}
 
@@ -1730,7 +1732,7 @@
 					return BookSeriesIssue.WaitingForLocal;
 				}
 
-				if (!firstUnowned && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended)) {
+				if (!firstUnowned && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended) && !hasNoSource) {
 					return BookSeriesIssue.WaitingForSource;
 				}
 				/*
@@ -3048,7 +3050,7 @@
 					"lastcheck", "lastupdate",
 					"publishedVolumes", "finishedPublication", "volumes", "forcednotes", "morenotes",
 					"link", "kindleSearchString", "kindleSearchStringSource", "ignoreIssues",
-					"koboSeriesId",
+					"koboSeriesId", "hasNoSource",
 				]
 			},
 			
