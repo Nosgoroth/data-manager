@@ -473,6 +473,30 @@ window.BookSeriesIssueItem = Object.extends({
 		*/
 		this.$actions = $interface.appendR('<span class="actions">');
 
+
+		// TODO: Support for multiple actions
+		const actions = this.getActions();
+		if (actions?.length > 1) {
+			const $dropdownActions = this.generateButtonWithDropdown(
+					actions[0].label,
+					() => window.open(actions[0].url, "_blank")
+				)
+				.appendTo(this.$actions)
+				.find("ul")
+				;
+
+			for (var i = 1; i < actions.length; i++) {
+				this.generateDropdownActionItem(actions[i].label, null, () => {
+					window.open(actions[i].url, "_blank")
+				}).appendTo($dropdownActions);
+			}
+		} else if (actions?.length) {
+			this.generateButton(
+				actions[0].label,
+				() => window.open(actions[0].url, "_blank")
+			).appendTo(this.$actions);
+		}
+		/*
 		const url = this.getActionUrl();
 		if (url) {
 			this.$actions.appendR('<a>')
@@ -482,9 +506,58 @@ window.BookSeriesIssueItem = Object.extends({
 				.text(this.getActionLabel())
 				;
 		}
+		*/
 
 		this.$li = $li;
 		return $li;
+	},
+
+	generateButton: function(label, action) {
+		return jQuery('<a>')
+			.addClass("btn btn-mini btn-inverse")
+			.click(evt => {
+				evt.preventDefault();
+				action();
+			})
+			.attr("target", "_blank")
+			.text(label)
+			;
+	},
+
+	generateButtonWithDropdown: function(label, action) {
+		const $x = jQuery(`<div class="btn-group">
+		  <button class="btn btn-inverse btn-mini">Action</button>
+		  <button class="btn btn-inverse btn-mini dropdown-toggle" data-toggle="dropdown">
+		    <span class="caret"></span>
+		  </button>
+		  <ul class="dropdown-menu pull-right">
+		    <!-- dropdown menu links -->
+		  </ul>
+		</div>`);
+		$x.find("button").first()
+			.text(label)
+			.click(evt => {
+				evt.preventDefault();
+				action();
+			})
+			;
+		return $x;
+	},
+
+	generateDropdownActionItem: function(label, iconName, action) {
+		const $li = jQuery('<li>');
+		const $a = $li.appendR('<a>')
+			.click(evt => {
+				evt.preventDefault();
+				action();
+			})
+			;
+		if (iconName) {
+			$a.appendR(`<i class="${iconName} icon-white"></i>`);
+			$a.appendText(" ");
+		}
+		$a.appendText(label);
+		return $li ;
 	},
 
 
@@ -629,7 +702,37 @@ window.BookSeriesIssueItem = Object.extends({
 				return null;
 		}
 		
-	}
+	},
+
+	getActions: function() {
+		// Array<{ url: string, label: string }>
+		let order;
+		let volumeDO;
+		switch (this.issue) {
+			case BookSeriesIssue.AwaitingDigitalVersion:
+				return this.bookSeriesDO.getFirstUnownedVolume().getStoreLinkActions();
+			case BookSeriesIssue.VolumeAvailable:
+				return this.bookSeriesDO.getFirstUnownedVolume().getStoreLinkActions();
+			case BookSeriesIssue.PreorderAvailable:
+				return this.bookSeriesDO.getFirstUnownedVolume().getStoreLinkActions();
+			case BookSeriesIssue.WaitingForLocal:
+			case BookSeriesIssue.LocalVolumeOverdue:
+				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
+				if (!volumeDO) { return null; }
+				return this.bookSeriesDO.getStoreSearchActions(volumeDO.getColorder());
+			case BookSeriesIssue.WaitingForSource:
+			case BookSeriesIssue.SourceVolumeOverdue:
+				const volumesCOL = this.bookSeriesDO.getVolumes();
+				order = volumesCOL.length ? volumesCOL[volumesCOL.length - 1].getColorder() : 0;
+				return this.bookSeriesDO.getSourceStoreSearchActions(order + 1);
+			case BookSeriesIssue.AwaitingStoreAvailability:
+				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
+				return this.bookSeriesDO.getStoreSearchActions(volumeDO.getColorder());
+			default:
+				return null;
+		}
+		
+	},
 
 },{
 	name: "BookSeriesIssueItem"

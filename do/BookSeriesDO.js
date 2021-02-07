@@ -412,6 +412,31 @@
 				}
 			},
 
+			getStoreLinkActions: function() {
+				const store = this.parent.getStore();
+				const amazonLink = this.getAmazonLink();
+				const amazonJpLink = this.getAmazonJpLink();
+				const koboLink = this.getKoboLink();
+
+				let values = [];
+
+				if (koboLink && store === BookSeriesDO.Enum.Store.Kobo) {
+					values = [
+						{ url: koboLink, label: "View on Kobo" },
+						{ url: amazonLink, label: "View on Amazon" },
+						{ url: amazonJpLink, label: "View on Amazon JP" },
+					];
+				} else {
+					values = [
+						{ url: amazonLink, label: "View on Amazon" },
+						{ url: koboLink, label: "View on Kobo" },
+						{ url: amazonJpLink, label: "View on Amazon JP" },
+					];
+				}
+
+				return values.filter(x => !!x.url);
+			},
+
 			getAmazonLink: function(){
 				const asin = this.getAsin();
 				if (!asin) { return null; }
@@ -1491,6 +1516,42 @@
 					return this.getKindleSearchLink(volumeNumber, asPhysicalBook); 
 				}
 			},
+
+			getStoreSearchActions: function(volumeNumber) {
+				const store = this.getStore();
+				const koboLink = this.getKoboSearchLink(volumeNumber);
+				const amazonLink = this.getKindleSearchLink(volumeNumber, false); 
+				const amazonTpbLink = this.getKindleSearchLink(volumeNumber, true); 
+
+				let values = [];
+
+				if (store === BookSeriesDO.Enum.Store.Kobo) {
+					values = [
+						{ url: koboLink, label: "Search on Kobo" },
+						{ url: amazonLink, label: "Search on Amazon" },
+						{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
+					];
+				} else {
+					values = [
+						{ url: amazonLink, label: "Search on Amazon" },
+						{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
+						{ url: koboLink, label: "Search on Kobo" },
+					];
+				}
+
+				return values.filter(x => !!x.url);
+			},
+
+			getSourceStoreSearchActions: function(volumeNumber) {
+				const amazonLink = this.getKindleSearchLinkSource(volumeNumber, false); 
+				const amazonTpbLink = this.getKindleSearchLinkSource(volumeNumber, true); 
+
+				return [
+					{ url: amazonLink, label: "Search on Amazon JP" },
+					{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
+				].filter(x => !!x.url);
+			},
+
 			getKindleSearchLink: function(volumeNumber, asPhysicalBook){
 				var kss = this.getKindleSearchString();
 				if (!kss) { return null; }
@@ -1503,14 +1564,18 @@
 					return "https://smile.amazon.com/gp/search/?search-alias=digital-text&unfiltered=1&field-language=English&sort=daterank&field-keywords="+encodeURIComponent(kss);
 				}
 			},
-			getKindleSearchLinkSource: function(volumeNumber){
+			getKindleSearchLinkSource: function(volumeNumber, asPhysicalBook){
 				var kss = this.getKindleSearchStringSource();
 				if (!kss) { return null; }
 				if (volumeNumber) {
 					kss += " "+volumeNumber;
 				}
 				// return "https://www.amazon.co.jp/gp/search/?search-alias=digital-text&sort=date-desc-rank&keywords="+encodeURIComponent(kss);
-				return "https://www.amazon.co.jp/gp/search/?search-alias=digital-text&keywords="+encodeURIComponent(kss);
+				if (asPhysicalBook) {
+					return "https://www.amazon.co.jp/s?i=stripbooks&ref=nb_sb_noss&k="+encodeURIComponent(kss);
+				} else {
+					return "https://www.amazon.co.jp/gp/search/?search-alias=digital-text&keywords="+encodeURIComponent(kss);
+				}
 			},
 			getKoboSearchLink: function(volumeNumber){
 				var kss = this.getKindleSearchString();
