@@ -270,6 +270,7 @@
 		AwaitingStoreAvailability: 6,
 		LocalVolumeOverdue: 7, // Some heuristics here
 		SourceVolumeOverdue: 8, // Some heuristics here
+		MissingInformation: 9,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -282,6 +283,7 @@
 			case BookSeriesIssue.AwaitingStoreAvailability: return 'Waiting for store';
 			case BookSeriesIssue.LocalVolumeOverdue: return 'Local volume overdue';
 			case BookSeriesIssue.SourceVolumeOverdue: return 'Source volume overdue';
+			case BookSeriesIssue.MissingInformation: return 'Missing information';
 			default: return 'Unknown issue';
 		}
 	}
@@ -464,6 +466,17 @@
 				return (this.options.index >= (this.options.total-1));
 			},
 
+			isMissingDateInformation: function() {
+				return this.canScrapeForPubDates();
+				/*
+				const status = this.getStatus();
+				return (
+					(status === BookSeriesVolumeDO.Enum.Status.Source && !this.getReleaseDateSource())
+					||
+					(status !== BookSeriesVolumeDO.Enum.Status.Source && !this.getReleaseDate())
+				);
+				*/
+			},
 
 			canScrapeForPubDates: function(){
 				return (
@@ -536,6 +549,14 @@
 				}, complete);
 			},
 
+			getAjaxBookSeriesScriptUri: function() {
+				if (window._ajaxBookseriesUri) {
+					return window._ajaxBookseriesUri;
+				} else {
+					return "./ajax_bookseries.php";
+				}
+			},
+
 			getKoboDataFromId: function(complete, maxRetries, currentRetry) {
 				complete = complete ? complete : function(){};
 				maxRetries = maxRetries ? maxRetries : 3;
@@ -549,7 +570,7 @@
 				const id = this.getKoboId();
 
 				jQuery.ajax({
-					url: "./ajax_bookseries.php",
+					url: this.getAjaxBookSeriesScriptUri(),
 					dataType: "json",
 					data: {
 						action: "getkoboinfo",
@@ -603,7 +624,7 @@
 				}
 
 				jQuery.ajax({
-					url: "./ajax_bookseries.php",
+					url: this.getAjaxBookSeriesScriptUri(),
 					data: {
 						action: "getpubdateasin",
 						asin: asin,
@@ -645,7 +666,7 @@
 				}
 
 				jQuery.ajax({
-					url: "./ajax_bookseries.php",
+					url: this.getAjaxBookSeriesScriptUri(),
 					data: {
 						action: "getpubdateasin",
 						asin: asin,
@@ -1549,7 +1570,7 @@
 
 				return [
 					{ url: amazonLink, label: "Search on Amazon JP" },
-					{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
+					{ url: amazonTpbLink, label: "Search on Amazon JP (TPB)" },
 				].filter(x => !!x.url);
 			},
 
@@ -1635,6 +1656,16 @@
 					window.customMultiDataObjectEditor.saveAndUpdate();
 				}
 			},
+			saveUpdatedVolume: function(volumeDO, dontSaveAndUpdate) {
+				const volumesCOL = this.getVolumes();
+				for (var i = 0; i < volumesCOL.length; i++) {
+					if (volumesCOL[i].getColorder() === volumeDO.getColorder()) {
+						volumesCOL.set(i, volumeDO);
+						this.saveVolumesFromCOL(volumesCOL, dontSaveAndUpdate);
+						break;
+					}
+				}
+			},
 			processVolumes: function(callback, dontSaveAndUpdate) {
 				const volumesCOL = this.getVolumes();
 				const newVolumesCOL = callback(volumesCOL);
@@ -1642,6 +1673,14 @@
 					this.saveVolumesFromCOL(newVolumesCOL, dontSaveAndUpdate);
 				}
 				return !!newVolumesCOL;
+			},
+
+			getLastSourceVolume: function() {
+				const volumesCOL = this.getVolumes();
+				const sourceCOL = volumesCOL.filter(x => {
+					return x.getStatus() === BookSeriesVolumeDO.Enum.Status.Source;
+				});
+				return sourceCOL[sourceCOL.length - 1];
 			},
 
 			getFirstUnownedVolume: function() {
@@ -1656,6 +1695,18 @@
 						st !== BookSeriesVolumeDO.Enum.Status.Backlog
 					);
 				})[0];
+			},
+
+			isAnyVolumeMissingDateInformation: function() {
+				const volumesCOL = this.getVolumes();
+				for (var i = 0; i < volumesCOL.length; i++) {
+					const volumeDO = volumesCOL[i];
+
+					if (volumeDO.isMissingDateInformation()) {
+						return true;
+					}
+				}
+				return false;
 			},
 
 			hasStatus: function(status) {
@@ -1685,20 +1736,24 @@
 					return null;
 				}
 
+				if (this.isAnyVolumeMissingDateInformation()) {
+					return [BookSeriesIssue.MissingInformation, null];
+				}
+
 				if (seriesStatus === BookSeriesDO.Enum.Status.Backlog && options.ignoreAllIssuesOnBacklog) {
 					return null;
 				}
 
 				const firstUnowned = this.getFirstUnownedVolume();
-				const firstUnownedStatus = firstUnowned ? firstUnowned.getStatus() : null;
+				const firstUnownedStatus = firstUnowned?.getStatus() ?? null;
 				const isFinishedPublication = this.isFinishedPublication();
 
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.TPB) {
-					return BookSeriesIssue.AwaitingDigitalVersion;
+					return [BookSeriesIssue.AwaitingDigitalVersion, firstUnowned];
 				}
 
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.StoreWait) {
-					return BookSeriesIssue.AwaitingStoreAvailability;
+					return [BookSeriesIssue.AwaitingStoreAvailability, firstUnowned];
 				}
 
 				if (
@@ -1711,29 +1766,30 @@
 						if (seriesStatus === BookSeriesDO.Enum.Status.Announced && options.ignorePreorderAvailableForAnnounced) {
 							return null;
 						}
-						return BookSeriesIssue.PreorderAvailable;
+						return [BookSeriesIssue.PreorderAvailable, firstUnowned];
 					} else {
-						return BookSeriesIssue.VolumeAvailable;
+						return [BookSeriesIssue.VolumeAvailable, firstUnowned];
 					}
 				}
 
 				const graphData = this.getPublicationGraphData();
 				const hasNoSource = this.isHasNoSource();
+
 				if (this.isSourceVolumeOverdue(graphData) && !hasNoSource) {
-					return BookSeriesIssue.SourceVolumeOverdue;
+					return [BookSeriesIssue.SourceVolumeOverdue];
 				}
 
 
 				if (this.isLocalVolumeOverdue(graphData, 60*60*24*30)) {
-					return BookSeriesIssue.LocalVolumeOverdue;
+					return [BookSeriesIssue.LocalVolumeOverdue];
 				}
 
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Source) {
-					return BookSeriesIssue.WaitingForLocal;
+					return [BookSeriesIssue.WaitingForLocal];
 				}
 
 				if (!firstUnowned && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended) && !hasNoSource) {
-					return BookSeriesIssue.WaitingForSource;
+					return [BookSeriesIssue.WaitingForSource];
 				}
 				/*
 				BookSeriesIssue:
@@ -1745,6 +1801,144 @@
 				*/
 
 				return null;
+			},
+
+			canResolveIssueWithAsin: function(issue) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						return true;
+					case BookSeriesIssue.AwaitingStoreAvailability:
+						return (this.getStore() === BookSeriesDO.Enum.Store.Kindle);
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+					default:
+						return false;
+				}
+			},
+			canResolveIssueWithStatus: function(issue) {
+				switch(issue) {
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+						return true;
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.SourceVolumeOverdue:
+					default:
+						return false;
+				}
+			},
+			canResolveIssueWithKoboId: function(issue) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.LocalVolumeOverdue:
+						return true;
+					case BookSeriesIssue.AwaitingStoreAvailability:
+						return (this.getStore() === BookSeriesDO.Enum.Store.Kobo);
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+					default:
+						return false;
+				}
+			},
+
+			resolveIssueWithAsin: function(issue, asin) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingStoreAvailability:
+						if (this.getStore() !== BookSeriesDO.Enum.Store.Kindle) {
+							throw new Error("Can't resolve this issue with an ASIN");
+						}
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.LocalVolumeOverdue:
+						const firstUnowned = this.getFirstUnownedVolume();
+						firstUnowned.setAsin(asin);
+						firstUnowned.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
+						this.saveUpdatedVolume(firstUnowned, true);
+						break;
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						const newVolume = this.addNextVolume({
+							sourceAsin: asin,
+							status: BookSeriesVolumeDO.Enum.Status.Source,
+						});
+						break;
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+						throw new Error("Can't resolve this issue with an ASIN");
+						break;
+					default:
+						throw new Error('Unknown issue');
+				}
+			},
+
+			resolveIssueWithKoboId: function(issue, koboId) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingStoreAvailability:
+						if (this.getStore() !== BookSeriesDO.Enum.Store.Kobo) {
+							throw new Error("Can't resolve this issue with a Kobo ID");
+						}
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.LocalVolumeOverdue:
+						const firstUnowned = this.getFirstUnownedVolume();
+						firstUnowned.setKoboId(koboId);
+						firstUnowned.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
+						this.saveUpdatedVolume(firstUnowned, true);
+						break;
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+						throw new Error("Can't resolve this issue with a Kobo ID");
+						break;
+					default:
+						throw new Error('Unknown issue');
+				}
+			},
+
+			resolveIssueWithVolumeStatus: function(issue, newVolumeStatus) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						throw new Error("Can't resolve this issue with a status");
+						break;
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+						const firstUnowned = this.getFirstUnownedVolume();
+						firstUnowned.setStatus(newVolumeStatus);
+						this.saveUpdatedVolume(firstUnowned, true);
+						break;
+					default:
+						throw new Error('Unknown issue');
+				}
+			},
+
+			addNextVolume: function(data) {
+				const volumes = this.getVolumes();
+				const lastVolume = volumes[volumes.length - 1];
+				const lastVolumeColorder = lastVolume.getColorder();
+				const newVolume = BookSeriesVolumeDO.DO(Object.shallowExtend({},data,{
+					colorder: lastVolumeColorder + 1
+				}));
+				volumes.push(newVolume);
+				lastVolume.setNextVolume(newVolume);
+				newVolume.setPreviousVolume(lastVolume);
+				this.saveVolumesFromCOL(volumes, true);
+				return newVolume;
 			},
 
 			isLocalVolumeOverdue: function(cachedPubGraphData, offsetSeconds){

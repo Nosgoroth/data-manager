@@ -158,7 +158,7 @@ window.VolumeTpbHandler = Object.extends({
 			    Actions
 			    <span class="caret"></span>
 			  </a>
-			  <ul class="dropdown-menu pull-right"></ul>
+			  <ul class="dropdown-menu pull-right text-right"></ul>
 			</div>
 		`).find('ul');
 
@@ -441,9 +441,30 @@ window.VolumeTpbQueueHandler = Object.extends({
 
 
 window.BookSeriesIssueItem = Object.extends({
-	__construct: function(bookSeriesDO, issue) {
+	__construct: function(jsonAjaxInterface, bookSeriesDO, issue) {
+		this.jsonAjaxInterface = jsonAjaxInterface;
 		this.bookSeriesDO = bookSeriesDO;
 		this.issue = issue;
+
+		const volumesCOL = this.bookSeriesDO.getVolumes();
+
+		this.lastVolume = volumesCOL[volumesCOL.length - 1];
+		this.nextVolumeColorder = this.lastVolume ? this.lastVolume.getColorder() + 1 : 1;
+		this.firstUnownedVolume = this.bookSeriesDO.getFirstUnownedVolume();
+		this.firstUnownedColorder = this.firstUnownedVolume?.getColorder() ?? 1;
+	},
+
+	save: function(complete) {
+		this.jsonAjaxInterface.jsonAjaxSave(
+			() => {
+				complete?.();
+				this.jsonAjaxInterface.rerender();
+			},
+			() => {
+				complete?.();
+				alert("Error: couldn't save");
+			}
+		);
 	},
 
 	getIssueName: function() {
@@ -466,11 +487,7 @@ window.BookSeriesIssueItem = Object.extends({
 			;
 
 		const $interface = $li.appendR('<span class="interface">');
-		/*
-		this.$issue = $interface.appendR('<span class="issue">')
-			.text( this.getIssueName() )
-			;
-		*/
+
 		this.$actions = $interface.appendR('<span class="actions">');
 
 
@@ -479,7 +496,7 @@ window.BookSeriesIssueItem = Object.extends({
 		if (actions?.length > 1) {
 			const $dropdownActions = this.generateButtonWithDropdown(
 					actions[0].label,
-					() => window.open(actions[0].url, "_blank")
+					actions[0].callback ?? (() => window.open(actions[0].url, "_blank"))
 				)
 				.appendTo(this.$actions)
 				.find("ul")
@@ -490,26 +507,15 @@ window.BookSeriesIssueItem = Object.extends({
 				this.generateDropdownActionItem(
 					action.label,
 					null,
-					() => window.open(action.url, "_blank")
+					action.callback ?? (() => window.open(action.url, "_blank"))
 				).appendTo($dropdownActions);
 			}
 		} else if (actions?.length) {
 			this.generateButton(
 				actions[0].label,
-				() => window.open(actions[0].url, "_blank")
+				actions[0].callback ?? (() => window.open(actions[0].url, "_blank"))
 			).appendTo(this.$actions);
 		}
-		/*
-		const url = this.getActionUrl();
-		if (url) {
-			this.$actions.appendR('<a>')
-				.addClass("btn btn-mini btn-inverse")
-				.attr("href", this.getActionUrl())
-				.attr("target", "_blank")
-				.text(this.getActionLabel())
-				;
-		}
-		*/
 
 		this.$li = $li;
 		return $li;
@@ -533,7 +539,7 @@ window.BookSeriesIssueItem = Object.extends({
 		  <button class="btn btn-inverse btn-mini dropdown-toggle" data-toggle="dropdown">
 		    <span class="caret"></span>
 		  </button>
-		  <ul class="dropdown-menu pull-right">
+		  <ul class="dropdown-menu pull-right text-right">
 		    <!-- dropdown menu links -->
 		  </ul>
 		</div>`);
@@ -566,175 +572,147 @@ window.BookSeriesIssueItem = Object.extends({
 
 
 	getDateUnix: function() {
-		let date;
 		switch (this.issue) {
 			case BookSeriesIssue.AwaitingDigitalVersion:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				date = volumeDO.getReleaseDate();
-				break;
-
 			case BookSeriesIssue.AwaitingStoreAvailability:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				date = volumeDO.getReleaseDate();
-				break;
-
 			case BookSeriesIssue.VolumeAvailable:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				date = volumeDO.getReleaseDate();
-				break;
-
 			case BookSeriesIssue.PreorderAvailable:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				date = volumeDO.getReleaseDate();
-				break;
+				return this.firstUnownedVolume?.getReleaseDateMoment()?.unix() ?? Infinity;
 
 			case BookSeriesIssue.WaitingForLocal:
-				
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				volumeDO = volumeDO ? volumeDO.previousVolumeDO : null;
-				if (volumeDO) {
-					date = 'Prev at ' + volumeDO.getReleaseDate();
-				} else {
-					return Infinity;
-				}
-				break;
+			case BookSeriesIssue.LocalVolumeOverdue:
+				return this.firstUnownedVolume?.previousVolumeDO?.getReleaseDateMoment().unix() ?? Infinity;
 				
 			case BookSeriesIssue.WaitingForSource:
-				const volumesCOL = this.bookSeriesDO.getVolumes();
-				volumeDO = volumesCOL.length ? volumesCOL[volumesCOL.length - 1] : null;
-				if (volumeDO) {
-					date = volumeDO.getReleaseDateSource();
-				} else {
-					return Infinity;
-				}
-				break;
+			case BookSeriesIssue.SourceVolumeOverdue:
+				return this.lastVolume?.getReleaseDateSourceMoment()?.unix() ?? Infinity;
 
 			default:
 				return Infinity;
 		}
-
-		return moment(date, 'DD/MM/YYYY').unix();
 	},
 
 	getDateText: function() {
 		switch (this.issue) {
 			case BookSeriesIssue.AwaitingDigitalVersion:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				return volumeDO.getReleaseDate();
-
 			case BookSeriesIssue.AwaitingStoreAvailability:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				return volumeDO.getReleaseDate();
-
 			case BookSeriesIssue.VolumeAvailable:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				return volumeDO.getReleaseDate();
-
 			case BookSeriesIssue.PreorderAvailable:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				return volumeDO.getReleaseDate();
+				return `Vol. ${this.firstUnownedColorder} next at ${this.firstUnownedVolume.getReleaseDate()}`;
 
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
-				
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				volumeDO = volumeDO ? volumeDO.previousVolumeDO : null;
+				volumeDO = this.firstUnownedVolume.previousVolumeDO ?? null;
 				if (volumeDO) {
-					return 'Prev at ' + volumeDO.getReleaseDate();
+					return `Vol. ${volumeDO.getColorder()} was last at ${volumeDO.getReleaseDate()}`;
 				}
 				return this.bookSeriesDO.getForcednotes();
 
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
-
-				const volumesCOL = this.bookSeriesDO.getVolumes();
-				volumeDO = volumesCOL.length ? volumesCOL[volumesCOL.length - 1] : null;
-				if (volumeDO) {
-					return 'Last at ' + volumeDO.getReleaseDateSource();
+				if (this.lastVolume) {
+					return `Vol. ${this.lastVolume.getColorder()} was last at ${this.lastVolume.getReleaseDateSource()}`;
 				} else {
 					return '';
 				}
 
-				return '';
-
-				return '';
-
 			default:
-				return 'Unknown issue';
+				return '';
 		}
-	},
-
-	getActionLabel: function() {
-		switch(this.issue) {
-			case BookSeriesIssue.AwaitingDigitalVersion: return 'View physical';
-			case BookSeriesIssue.VolumeAvailable: return 'View volume';
-			case BookSeriesIssue.PreorderAvailable: return 'View volume';
-			case BookSeriesIssue.WaitingForLocal: return 'Search on store';
-			case BookSeriesIssue.WaitingForSource: return 'Search on Amazon JP';
-			case BookSeriesIssue.AwaitingStoreAvailability: return 'Search on store';
-			case BookSeriesIssue.LocalVolumeOverdue: return 'Search on store';
-			case BookSeriesIssue.SourceVolumeOverdue: return 'Search on Amazon JP';
-			default: return 'Unknown issue';
-		}
-	},
-
-	getActionUrl: function() {
-		let order;
-		let volumeDO;
-		switch (this.issue) {
-			case BookSeriesIssue.AwaitingDigitalVersion:
-				return this.bookSeriesDO.getFirstUnownedVolume().getPreferredStoreLink();
-			case BookSeriesIssue.VolumeAvailable:
-				return this.bookSeriesDO.getFirstUnownedVolume().getPreferredStoreLink();
-			case BookSeriesIssue.PreorderAvailable:
-				return this.bookSeriesDO.getFirstUnownedVolume().getPreferredStoreLink();
-			case BookSeriesIssue.WaitingForLocal:
-			case BookSeriesIssue.LocalVolumeOverdue:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				if (!volumeDO) { return null; }
-				return this.bookSeriesDO.getPreferredStoreSearchLink(volumeDO.getColorder(), true);
-			case BookSeriesIssue.WaitingForSource:
-			case BookSeriesIssue.SourceVolumeOverdue:
-				const volumesCOL = this.bookSeriesDO.getVolumes();
-				order = volumesCOL.length ? volumesCOL[volumesCOL.length - 1].getColorder() : 0;
-				return this.bookSeriesDO.getKindleSearchLinkSource(order + 1);
-			case BookSeriesIssue.AwaitingStoreAvailability:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				return this.bookSeriesDO.getPreferredStoreSearchLink(volumeDO.getColorder(), true);
-			default:
-				return null;
-		}
-		
 	},
 
 	getActions: function() {
-		// Array<{ url: string, label: string }>
-		let order;
-		let volumeDO;
+		// Array<{ url?: string, callback?: () => void, label: string }>
+		let actions = null;
 		switch (this.issue) {
 			case BookSeriesIssue.AwaitingDigitalVersion:
-				return this.bookSeriesDO.getFirstUnownedVolume().getStoreLinkActions();
 			case BookSeriesIssue.VolumeAvailable:
-				return this.bookSeriesDO.getFirstUnownedVolume().getStoreLinkActions();
 			case BookSeriesIssue.PreorderAvailable:
-				return this.bookSeriesDO.getFirstUnownedVolume().getStoreLinkActions();
+				actions = this.firstUnownedVolume?.getStoreLinkActions();
+				break;
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				if (!volumeDO) { return null; }
-				return this.bookSeriesDO.getStoreSearchActions(volumeDO.getColorder());
+				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
+				break;
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
-				const volumesCOL = this.bookSeriesDO.getVolumes();
-				order = volumesCOL.length ? volumesCOL[volumesCOL.length - 1].getColorder() : 0;
-				return this.bookSeriesDO.getSourceStoreSearchActions(order + 1);
+				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.nextVolumeColorder);
+				break;
 			case BookSeriesIssue.AwaitingStoreAvailability:
-				volumeDO = this.bookSeriesDO.getFirstUnownedVolume();
-				return this.bookSeriesDO.getStoreSearchActions(volumeDO.getColorder());
+				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
+				break;
+			case BookSeriesIssue.MissingInformation:
+				actions = [{
+					label: "Scrape info",
+					callback: () => {
+						this.bookSeriesDO.getPubDatesFromAsins(() => {
+							this.save();
+							alert("Complete");
+						}, false);
+						alert("Now scraping...\nClose this message and don't do any more operations until complete.\nYou can see progress information in the console. Press F12 / Ctrl+Shift+i / Cmd+Opt+i to open it.");
+					}
+				}]
+				break;
 			default:
-				return null;
+				break;
 		}
-		
+
+		if (!Array.isArray(actions)) { actions = []; }
+
+		if (this.bookSeriesDO.canResolveIssueWithAsin(this.issue)) {
+			actions.push({
+				label: "Set ASIN",
+				callback: () => {
+					try {
+						const asin = prompt("ASIN to resolve:");
+						if (!asin) { return; }
+						this.bookSeriesDO.resolveIssueWithAsin(this.issue, asin);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+				}
+			});
+		}
+
+		if (this.bookSeriesDO.canResolveIssueWithKoboId(this.issue)) {
+			actions.push({
+				label: "Set Kobo ID",
+				callback: () => {
+					try {
+						const koboId = prompt("ASIN to resolve:");
+						if (!koboId) { return; }
+						this.bookSeriesDO.resolveIssueWithKoboId(this.issue, koboId);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+				}
+			});
+		}
+
+		if (this.bookSeriesDO.canResolveIssueWithStatus(this.issue)) {
+			actions.push({
+				label: "Set status",
+				callback: () => {
+					try {
+						const legend = Object.keys(BookSeriesVolumeDO.Enum.Status)
+							.map(x => `${x} = ${BookSeriesVolumeDO.Enum.Status[x]}`)
+							.join(", ")
+							;
+						const status = prompt("Status to resolve:\n"+legend);
+						if (!status) { return; }
+						this.bookSeriesDO.resolveIssueWithStatus(this.issue, status);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+					
+				}
+			});
+		}
+
+		return actions;
 	},
 
 },{
@@ -747,7 +725,12 @@ window.bookSeriesAjaxInterface = Object.extends({
 	_type: window.BookSeriesDO,
 	_ajaxendpoint: "../../ajax.php",
 	JsonAjaxInterface_afterDomReady: function(){},
+	rerender: function(){
+		this.JsonAjaxInterface_afterDataReady();
+	},
 	JsonAjaxInterface_afterDataReady: async function(){
+
+		window._ajaxBookseriesUri = "../../ajax_bookseries.php";
 		
 		const vtpbs = [];
 		let issues = [];
@@ -765,17 +748,19 @@ window.bookSeriesAjaxInterface = Object.extends({
 				return;
 			}
 
-			const issue = bookSeriesDO.getIssue({
+			const issueInfo = bookSeriesDO.getIssue({
 				ignoreAllIssuesOnBacklog: true,
 				ignorePreorderAvailableForAnnounced: true,
 			});
-			if (issue) {
-				const issueobj = new BookSeriesIssueItem(bookSeriesDO, issue);
+			if (issueInfo) {
+				const [issue, volumeDO] = issueInfo;
+				const issueobj = new BookSeriesIssueItem(this, bookSeriesDO, issue);
 				issues.push(issueobj);
 			}
 
 			if (!bookSeriesDO.hasStatus(statusesToIgnore) && bookSeriesDO.isSourceVolumeOverdue()) {
 				const issueobj = new BookSeriesIssueItem(
+					this,
 					bookSeriesDO,
 					BookSeriesIssue.SourceVolumeOverdue
 				);
@@ -797,12 +782,11 @@ window.bookSeriesAjaxInterface = Object.extends({
 				return a.getReleaseDateSortable().localeCompare(b.getReleaseDateSortable());
 			});
 			
-			const $tpbdigital = jQuery("#tpbdigital-app");
+			const $tpbdigital = jQuery("#tpbdigital-app").empty();
 			
 			window._vtpbq = new VolumeTpbQueueHandler(vtpbs, () => {
 				this.jsonAjaxSave(async () => {
-					await sleep(3000);
-					window.location.reload();	
+					this.rerender();
 				}, () => {
 					alert("Error: couldn't save");
 				});
@@ -813,7 +797,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 			sourceOverdue = sourceOverdue.sort((a, b) => {
 				return a.getDateUnix() - b.getDateUnix();
 			});
-			const $overdue = jQuery("#source-overdue-app");
+			const $overdue = jQuery("#source-overdue-app").empty();
 			const $ul = $overdue.appendR('<ul class="issues">');
 			for (const issue of sourceOverdue) {
 				issue.render().appendTo($ul);
@@ -835,9 +819,10 @@ window.bookSeriesAjaxInterface = Object.extends({
 			}
 
 
-			const $issues = jQuery("#issues-app");
+			const $issues = jQuery("#issues-app").empty();
 			const existingIssueTypesUnsorted = Object.keys(issuesSorted).map(x => parseInt(x));
 			const existingIssueTypes = [
+				BookSeriesIssue.MissingInformation,
 				BookSeriesIssue.VolumeAvailable,
 				BookSeriesIssue.PreorderAvailable,
 				BookSeriesIssue.AwaitingStoreAvailability,
