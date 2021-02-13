@@ -2196,17 +2196,16 @@
 								}
 							}
 							if (_item){
-								//let lead = indexWeightedMean(leadtimes);
-								//let lead = leadtimes[leadtimes.length-1];
-								const lead = leadtimes.reduce((a,v) => (a<v ? a : v), Infinity);
+								// Minimum time a volume has taken to be released in English
+								let lead = leadtimes.reduce((a,v) => (a<v ? a : v), Infinity);
 
-								/*
-								const sixmonths = 60*60*24*(365/12)*12;
-								if (lead > sixmonths) {
-									lead = sixmonths;
+								// Cap it at 10 months
+								const maxlead = 60*60*24*(365/12)*10; // 10 months
+								if (lead > maxlead) {
+									lead = maxlead;
 								}
-								*/
 
+								// Take into account this lead time when computing next release date
 								const nexten_withlead = _item.add(lead, "seconds");
 								if (nexten.isBefore(nexten_withlead)) {
 									nexten = moment(nexten_withlead);
