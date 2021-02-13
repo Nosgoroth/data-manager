@@ -37,7 +37,9 @@ window.VolumeTpbHandler = Object.extends({
 				.text(this.getName())
 			.parent()
 			.appendR('<span class="date">')
-				.text(this.volumeDO.getReleaseDate())
+				.text(
+					`${this.volumeDO.getReleaseDateMoment()?.fromNow()} (${this.volumeDO.getReleaseDate()})`
+				)
 			;
 		const $interface = $li.appendR('<span class="interface">');
 		this.$result = $interface.appendR('<span class="result">');
@@ -506,7 +508,7 @@ window.BookSeriesIssueItem = Object.extends({
 				let action = actions[i];
 				this.generateDropdownActionItem(
 					action.label,
-					null,
+					action.icon,
 					action.callback ?? (() => window.open(action.url, "_blank"))
 				).appendTo($dropdownActions);
 			}
@@ -570,7 +572,7 @@ window.BookSeriesIssueItem = Object.extends({
 	},
 
 
-
+	// For sorting
 	getDateUnix: function() {
 		switch (this.issue) {
 			case BookSeriesIssue.AwaitingDigitalVersion:
@@ -581,11 +583,11 @@ window.BookSeriesIssueItem = Object.extends({
 
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
-				return this.firstUnownedVolume?.previousVolumeDO?.getReleaseDateMoment().unix() ?? Infinity;
+				return this.bookSeriesDO.getNextVolumeExpectedDateUncorrected()?.unix() ?? 0;
 				
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
-				return this.lastVolume?.getReleaseDateSourceMoment()?.unix() ?? Infinity;
+				return this.bookSeriesDO.getNextSourceVolumeExpectedDateUncorrected()?.unix() ?? Infinity;
 
 			default:
 				return Infinity;
@@ -598,23 +600,51 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.AwaitingStoreAvailability:
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
-				return `Vol. ${this.firstUnownedColorder} next at ${this.firstUnownedVolume.getReleaseDate()}`;
+				{
+					const date = this.firstUnownedVolume.getReleaseDateMoment()?.fromNow() ?? '';
+					return `Vol. ${this.firstUnownedColorder} ${date}`;
+				}
 
 			case BookSeriesIssue.WaitingForLocal:
-			case BookSeriesIssue.LocalVolumeOverdue:
-				volumeDO = this.firstUnownedVolume.previousVolumeDO ?? null;
+				volumeDO = this.firstUnownedVolume?.previousVolumeDO ?? null;
 				if (volumeDO) {
-					return `Vol. ${volumeDO.getColorder()} was last at ${volumeDO.getReleaseDate()}`;
+					const prevVolumeColorder = volumeDO.getColorder();
+					const prevVolumeDate = volumeDO.getReleaseDateMoment()?.fromNow();
+					const nextVolumeColorder = this.firstUnownedColorder;
+					const nextVolumeDate = this.bookSeriesDO.getNextVolumeExpectedDate()?.fromNow(true);
+					if (nextVolumeDate) {
+						return `Vol. ${nextVolumeColorder} in about ${nextVolumeDate}, prev ${prevVolumeDate}`;
+					} else {
+						return `Vol. ${prevVolumeColorder} was last ${prevVolumeDate}`
+					}
 				}
-				return this.bookSeriesDO.getForcednotes();
+				{
+					const note = this.bookSeriesDO.getForcednotes();
+					return note ? `Note: ${this.bookSeriesDO.getForcednotes()}` : '';
+				}
 
+			case BookSeriesIssue.LocalVolumeOverdue:
+				return `Vol. ${this.firstUnownedColorder} overdue ${this.bookSeriesDO.getOverdueText()}`;
+				
 			case BookSeriesIssue.WaitingForSource:
-			case BookSeriesIssue.SourceVolumeOverdue:
 				if (this.lastVolume) {
-					return `Vol. ${this.lastVolume.getColorder()} was last at ${this.lastVolume.getReleaseDateSource()}`;
-				} else {
-					return '';
+					const prevVolumeColorder = this.lastVolume.getColorder();
+					const prevVolumeDate = this.lastVolume.getReleaseDateSourceMoment()?.fromNow();
+					const nextVolumeColorder = prevVolumeColorder + 1;
+					const nextVolumeDate = this.bookSeriesDO.getNextSourceVolumeExpectedDate()?.fromNow(true);
+					if (nextVolumeDate) {
+						return `Vol. ${nextVolumeColorder} in about ${nextVolumeDate}, prev ${prevVolumeDate}`;
+					} else {
+						return `Vol. ${prevVolumeColorder} was last ${prevVolumeDate}`
+					}
 				}
+				{
+					const note = this.bookSeriesDO.getForcednotes();
+					return note ? `Note: ${this.bookSeriesDO.getForcednotes()}` : '';
+				}
+
+			case BookSeriesIssue.SourceVolumeOverdue:
+				return `Vol. ${this.lastVolume.getColorder() + 1} overdue ${this.bookSeriesDO.getSourceOverdueText()}`;
 
 			default:
 				return '';
@@ -662,6 +692,7 @@ window.BookSeriesIssueItem = Object.extends({
 		if (this.bookSeriesDO.canResolveIssueWithAsin(this.issue)) {
 			actions.push({
 				label: "Set ASIN",
+				icon: "icon-edit",
 				callback: () => {
 					try {
 						const asin = prompt("ASIN to resolve:");
@@ -678,6 +709,7 @@ window.BookSeriesIssueItem = Object.extends({
 		if (this.bookSeriesDO.canResolveIssueWithKoboId(this.issue)) {
 			actions.push({
 				label: "Set Kobo ID",
+				icon: "icon-edit",
 				callback: () => {
 					try {
 						const koboId = prompt("ASIN to resolve:");
@@ -694,6 +726,7 @@ window.BookSeriesIssueItem = Object.extends({
 		if (this.bookSeriesDO.canResolveIssueWithStatus(this.issue)) {
 			actions.push({
 				label: "Set status",
+				icon: "icon-chevron-right",
 				callback: () => {
 					try {
 						const legend = Object.keys(BookSeriesVolumeDO.Enum.Status)
@@ -704,6 +737,21 @@ window.BookSeriesIssueItem = Object.extends({
 						if (!status) { return; }
 						this.bookSeriesDO.resolveIssueWithStatus(this.issue, status);
 						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+					
+				}
+			});
+		}
+
+		if (this.bookSeriesDO.canShowPublicationGraph()) {
+			actions.push({
+				label: "Publication graph",
+				icon: "icon-signal",
+				callback: () => {
+					try {
+						this.bookSeriesDO.showPublicationGraph();
 					} catch(err) {
 						alert(err.message);
 					}
@@ -797,6 +845,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 			sourceOverdue = sourceOverdue.sort((a, b) => {
 				return a.getDateUnix() - b.getDateUnix();
 			});
+			sourceOverdue.reverse();
 			const $overdue = jQuery("#source-overdue-app").empty();
 			const $ul = $overdue.appendR('<ul class="issues">');
 			for (const issue of sourceOverdue) {
@@ -806,6 +855,18 @@ window.bookSeriesAjaxInterface = Object.extends({
 		
 
 		{
+			const issueTypesToSortReversed = [
+				//BookSeriesIssue.MissingInformation,
+				//BookSeriesIssue.VolumeAvailable,
+				//BookSeriesIssue.PreorderAvailable,
+				//BookSeriesIssue.AwaitingStoreAvailability,
+				//BookSeriesIssue.AwaitingDigitalVersion,
+				//BookSeriesIssue.WaitingForLocal,
+				BookSeriesIssue.LocalVolumeOverdue,
+				//BookSeriesIssue.WaitingForSource,
+				BookSeriesIssue.SourceVolumeOverdue,
+			]
+
 			issues = issues.sort((a, b) => {
 				return a.getDateUnix() - b.getDateUnix();
 			});
@@ -816,6 +877,14 @@ window.bookSeriesAjaxInterface = Object.extends({
 					issuesSorted[i] = [];
 				}
 				issuesSorted[i].push(issue);
+			}
+			for (const key of Object.keys(issuesSorted)) {
+				issuesSorted[key].sort((a, b) => {
+					return a.getDateUnix() - b.getDateUnix();
+				});
+				if (issueTypesToSortReversed.includes(parseInt(key))) {
+					issuesSorted[key].reverse();
+				}
 			}
 
 

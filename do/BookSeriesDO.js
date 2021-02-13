@@ -1942,7 +1942,6 @@
 			},
 
 			isLocalVolumeOverdue: function(cachedPubGraphData, offsetSeconds){
-				if (this.isFinishedPublication()) { return false; }
 				const data = cachedPubGraphData ? cachedPubGraphData : this.getPublicationGraphData();
 				return data.nexten
 					? moment().add(offsetSeconds, 'seconds').isSameOrAfter(data.nexten, 'days')
@@ -1951,7 +1950,6 @@
 			},
 
 			isSourceVolumeOverdue: function(cachedPubGraphData){
-				if (this.isFinishedPublication()) { return false; }
 				const data = cachedPubGraphData ? cachedPubGraphData : this.getPublicationGraphData();
 				return data.nextjp ? moment().isSameOrAfter(data.nextjp, 'days') : null;
 			},
@@ -2072,7 +2070,51 @@
 				return moment(r[1], "YYYY/MM/DD");
 			},
 
+			getNextVolumeExpectedDate: function(){
+				const pubGraphData = this.getPublicationGraphData();
+				return pubGraphData.nexten;
+			},
+
+			getNextSourceVolumeExpectedDate: function(){
+				const pubGraphData = this.getPublicationGraphData();
+				return pubGraphData.nextjp;
+			},
+
+			getNextVolumeExpectedDateUncorrected: function(){
+				const pubGraphData = this.getPublicationGraphData();
+				return pubGraphData.nexten_uncorrected;
+			},
+
+			getNextSourceVolumeExpectedDateUncorrected: function(){
+				const pubGraphData = this.getPublicationGraphData();
+				return pubGraphData.nextjp_uncorrected;
+			},
+
+			getOverdueText: function() {
+				const dueTime = this.getNextVolumeExpectedDateUncorrected();
+				if (!dueTime) { return ''; }
+				if (dueTime.isBefore()) {
+					return `by ${dueTime.fromNow(true)}`;
+				} else {
+					return `in ${dueTime.toNow(true)}`;
+				}
+			},
+
+			getSourceOverdueText: function() {
+				const dueTime = this.getNextSourceVolumeExpectedDateUncorrected();
+				if (!dueTime) { return ''; }
+				if (dueTime.isBefore()) {
+					return `by ${dueTime.fromNow(true)}`;
+				} else {
+					return `in ${dueTime.toNow(true)}`;
+				}
+			},
+
 			getPublicationGraphData: function(){
+
+				if (this._pubGraphData) {
+					return this._pubGraphData;
+				}
 
 				var jp = [], en = [], jpdate = [], endate = [];
 				var volumesCOL = this.getVolumes();
@@ -2112,31 +2154,40 @@
 				const isFinished = this.isFinishedPublication();
 				let nextjp;
 				let nexten;
+				let nextjp_uncorrected;
+				let nexten_uncorrected;
 				let maxjp;
 				let maxen;
 
 				try {
 
-					if (!isFinished) {
+					if (true || !isFinished) {
 
-						nextjp = nextOcurrenceInListWeighted(jpdate);
+						if (!isFinished) {
+							nextjp = nextOcurrenceInListWeighted(jpdate);
+						}
 						maxjp = jp.reduce((a,v) => (a>v[1] ? a : v[1]), 0);
 
 						try {
-							nexten = nextOcurrenceInListWeighted(endate);
 							maxen = en.reduce((a,v) => (a>v[1] ? a : v[1]), 0);
+							if (nextjp || maxen < maxjp) {
+								nexten = nextOcurrenceInListWeighted(endate);
+							}
 						} catch(e) {
 							maxen = 0;
 						}
+
+						nextjp_uncorrected = nextjp ? moment(nextjp) : null;
+						nexten_uncorrected = nexten ? moment(nexten) : null;
 
 						if (nextjp && nextjp.isBefore(now)) { nextjp = now; }
 						if (nexten && nexten.isBefore(now)) { nexten = now; }
 
 						//Don't allow predict if predicted date doesn't account for weighted mean loc time (max 6 months)
-						if (nexten && nextjp && leadtimes.length) {
+						if (nexten && leadtimes.length) {
 							const targetjp = maxen+1;
 							let _item;
-							if (maxjp === maxen) {
+							if (nextjp && maxjp === maxen) {
 								_item = moment(nextjp);
 							} else {
 								const item = jp.filter(x => x[1] == targetjp)[0];
@@ -2158,7 +2209,10 @@
 
 								const nexten_withlead = _item.add(lead, "seconds");
 								if (nexten.isBefore(nexten_withlead)) {
-									nexten = nexten_withlead;
+									nexten = moment(nexten_withlead);
+								}
+								if (nexten_uncorrected.isBefore(nexten_withlead)) {
+									nexten_uncorrected = moment(nexten_withlead);
 								}
 							}
 						}
@@ -2173,18 +2227,22 @@
 				// console.log("JP:", jpdate.map(x=>x.format("DD/MMM/YYYY")), 'NEXT', nextjp ? nextjp.format("DD/MMM/YYYY") : null);
 				// console.log("EN:", endate.map(x=>x.format("DD/MMM/YYYY")), 'NEXT', nexten ? nexten.format("DD/MMM/YYYY") : null);
 
-				return {
+				this._pubGraphData = {
 					jp: jp,
 					en: en,
 					jpdate: jpdate,
 					endate: endate,
 					nextjp: nextjp,
 					nexten: nexten,
+					nextjp_uncorrected: nextjp_uncorrected,
+					nexten_uncorrected: nexten_uncorrected,
 					maxjp: maxjp,
 					maxen: maxen,
 					leadtimes: leadtimes,
 					COL: volumesCOL
 				};
+
+				return this._pubGraphData;
 			},
 
 
@@ -2339,10 +2397,37 @@
 						;
 				}
 
-
-				window.customMultiDataObjectEditor._editor.showArbitraryForm($form);
+				if (window.customMultiDataObjectEditor?._editor) {
+					window.customMultiDataObjectEditor._editor.showArbitraryForm($form);
+				} else {
+					this.standaloneShowArbitraryForm($form);
+				}
 
 				drawPubGraph("pubgraphContainer", data, this.isFinishedPublication());
+			},
+
+			standaloneShowArbitraryForm: function($form) {
+				let $fc = jQuery(".formContainer");
+				if (!$fc.length) {
+					$fc = jQuery('<div class="formContainer">')
+						.click(function(e){
+							if (e.target.isSameNode(e.delegateTarget)) {
+								$fc.fadeOut('fast');
+							}
+						})
+						.appendTo("body")
+						;
+				}
+				$fc.hide();
+				jQuery('<button class="btn btn-small btn-inverse">')
+					.text("Close")
+					.click(function(e){
+						e.preventDefault(); e.stopPropagation();
+						$fc.fadeOut('fast');
+					})
+					.appendTo($form)
+					;
+				$fc.empty().append($form).fadeIn('fast');
 			},
 
 			/*

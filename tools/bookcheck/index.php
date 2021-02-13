@@ -61,6 +61,8 @@ if (file_exists('../../login.php')) {
 <script async src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.min.js"></script>
 <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.18.0/js/md5.min.js'></script>
 <script src="//cdn.jsdelivr.net/npm/less@3.13" ></script>
+<script src="https://code.highcharts.com/highcharts.src.js"></script>
+<script src="https://code.highcharts.com/themes/high-contrast-dark.js"></script>
 
 <!-- DOOP -->
 <script type='text/javascript' src='../../res/doop/oop.js'></script>
