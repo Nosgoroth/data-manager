@@ -1650,6 +1650,7 @@
 				}
 				var volumesString =  JSON.stringify(strings);
 				this.setVolumes(volumesString);
+				this.clearPublicationGraphData();
 				this.setLastupdate( Date.now() );
 				this.onChange();
 				if (!dontSaveAndUpdate && window.customMultiDataObjectEditor) {
@@ -2108,6 +2109,10 @@
 				} else {
 					return `in ${dueTime.toNow(true)}`;
 				}
+			},
+
+			clearPublicationGraphData: function() {
+				this._pubGraphData = null;
 			},
 
 			getPublicationGraphData: function(){
