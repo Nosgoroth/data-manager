@@ -2401,6 +2401,65 @@
 						;
 				}
 
+				{
+					const $p = $form.appendR('<p>');
+					try {
+
+						if (this.isHasNoSource()) { throw new Error(""); }
+						
+						const isFinished = this.isFinishedPublication();
+						const volumesToCatchUp = data.jp.length - data.en.length;
+						if (isFinished && !volumesToCatchUp) {
+							throw new Error("");
+						}
+						if (!isFinished && volumesToCatchUp < 2) {
+							throw new Error("Caught up to ongoing series.");
+						}
+						if (data.en.length < 2 || data.jp.length < 1) {
+							throw new Error("Not enough data to project.");
+						}
+						
+						const items = data.en.map(function(x){ return x[0]; });
+						const dists = items.slice(1).map((v, i) => v - items[i]);
+						const avg = indexWeightedMean(dists) / 1000;
+						
+						const latestEnDate = items[items.length - 1] / 1000;
+						const time = moment.unix(latestEnDate + avg*volumesToCatchUp);
+						const timeStr = time.format("DD/MM/YYYY");
+						const latestJpVolume = data.jp[data.jp.length - 1][1];
+						
+						
+						$p.appendR('<span>').html(`Caught up to Vol. ${latestJpVolume} <strong>${time.fromNow()}</strong> (${timeStr}). `);
+
+						const itemsjp = data.jp.map(function(x){ return x[0]; });
+						const distsjp = itemsjp.slice(1).map((v, i) => v - itemsjp[i]);
+						const avgjp = indexWeightedMean(distsjp) / 1000;
+
+						if (isFinished || data.jp.length < 2) {
+							throw new Error("");
+						}
+
+						if (avgjp <= avg) {
+							throw new Error("Will never fully catch up.");
+						}
+
+						const latestEnVolume = data.en[data.en.length - 1][1];
+						const x  = (latestEnVolume - latestJpVolume) / ((1/avgjp) - (1/avg));
+						const intersectionAtVolume = Math.floor(latestEnVolume + x/avg);
+						const intersection = moment.unix( latestEnDate + (intersectionAtVolume - latestEnVolume) * avg );
+						const intersection_str = intersection.format("DD/MM/YYYY");
+						$p.appendR('<span>').html(`Fully caught up <strong>${intersection.fromNow()}</strong> (${intersection_str}) at Vol. ${intersectionAtVolume}. `);
+						
+					} catch (error) {
+						if (error && error.message) {
+							$p.appendR('<span>').text(error.message);
+						}
+						if ($p.is(':empty')) {
+							$p.remove();
+						}
+					}
+				}
+
 				if (window.customMultiDataObjectEditor?._editor) {
 					window.customMultiDataObjectEditor._editor.showArbitraryForm($form);
 				} else {
