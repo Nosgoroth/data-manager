@@ -1544,6 +1544,7 @@
 				const koboLink = this.getKoboSearchLink(volumeNumber);
 				const amazonLink = this.getKindleSearchLink(volumeNumber, false); 
 				const amazonTpbLink = this.getKindleSearchLink(volumeNumber, true); 
+				const rightstufLink = this.getRightstufSearchLink(volumeNumber);
 
 				let values = [];
 
@@ -1552,12 +1553,14 @@
 						{ url: koboLink, label: "Search on Kobo" },
 						{ url: amazonLink, label: "Search on Amazon" },
 						{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
+						{ url: rightstufLink, label: "Search on Rightstuf" },
 					];
 				} else {
 					values = [
 						{ url: amazonLink, label: "Search on Amazon" },
 						{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
 						{ url: koboLink, label: "Search on Kobo" },
+						{ url: rightstufLink, label: "Search on Rightstuf" },
 					];
 				}
 
@@ -1611,6 +1614,27 @@
 				} else {
 					return "https://www.kobo.com/es/en/search?query="+encodeURIComponent(kss);
 				}
+			},
+			getRightstufSearchLink: function(volumeNumber) {
+				var kss = this.getKindleSearchString();
+				if (!kss) { return null; }
+				if (volumeNumber) {
+					kss += " "+volumeNumber;
+				}
+				const type = this.getType();
+				let typeInUrl;
+				switch (type) {
+					case BookSeriesDO.Enum.Type.Novel:
+						typeInUrl = 'category/Novels';
+						break;
+					case BookSeriesDO.Enum.Type.Manga:
+						typeInUrl = 'category/Manga';
+						break;
+					default:
+						typeInUrl = 'search'
+						break;
+				}
+				return `https://www.rightstufanime.com/${typeInUrl}?keywords=${ encodeURIComponent(kss) }`;
 			},
 			getVolumes: function(){
 				var volumesraw = this.get("volumes");
@@ -1851,6 +1875,22 @@
 						return false;
 				}
 			},
+			canResolveIssueWithReleaseDate: function(issue) {
+				switch(issue) {
+					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						return true;
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+						return false;
+					default:
+						return false;
+				}
+			},
 
 			resolveIssueWithAsin: function(issue, asin) {
 				switch(issue) {
@@ -1868,7 +1908,7 @@
 						break;
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
-						const newVolume = this.addNextVolume({
+						this.addNextVolume({
 							sourceAsin: asin,
 							status: BookSeriesVolumeDO.Enum.Status.Source,
 						});
@@ -1923,6 +1963,31 @@
 						firstUnowned.setStatus(newVolumeStatus);
 						this.saveUpdatedVolume(firstUnowned, true);
 						break;
+					default:
+						throw new Error('Unknown issue');
+				}
+			},
+			resolveIssueWithReleaseDate: function(issue, releaseDate) {
+				switch(issue) {
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.LocalVolumeOverdue:
+						const firstUnowned = this.getFirstUnownedVolume();
+						firstUnowned.setReleaseDate(releaseDate);
+						firstUnowned.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
+						this.saveUpdatedVolume(firstUnowned, true);
+						break;
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						this.addNextVolume({
+							releaseDateSource: releaseDate,
+							status: BookSeriesVolumeDO.Enum.Status.Source,
+						});
+						break;
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+						throw new Error("Can't resolve this issue with a release date");
 					default:
 						throw new Error('Unknown issue');
 				}

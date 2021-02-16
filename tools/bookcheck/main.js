@@ -745,6 +745,28 @@ window.BookSeriesIssueItem = Object.extends({
 			});
 		}
 
+		if (this.bookSeriesDO.canResolveIssueWithReleaseDate(this.issue)) {
+			actions.push({
+				label: "Set release date",
+				icon: "icon-calendar",
+				callback: () => {
+					try {
+						const releaseDate = prompt("Release date to set:\n(DD/MM/YYYY)");
+						if (!releaseDate) { return; }
+						if (!releaseDate.match(/^[\d]{1,2}\/[\d]{1,2}\/[\d]{4}$/)) {
+							alert('Invalid date format');
+							return;
+						}
+						this.bookSeriesDO.resolveIssueWithReleaseDate(this.issue, releaseDate);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+					
+				}
+			});
+		}
+
 		if (this.bookSeriesDO.canShowPublicationGraph()) {
 			actions.push({
 				label: "Publication graph",
