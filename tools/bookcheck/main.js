@@ -443,10 +443,11 @@ window.VolumeTpbQueueHandler = Object.extends({
 
 
 window.BookSeriesIssueItem = Object.extends({
-	__construct: function(jsonAjaxInterface, bookSeriesDO, issue) {
+	__construct: function(jsonAjaxInterface, bookSeriesDO, issue, volumeWithIssueDO) {
 		this.jsonAjaxInterface = jsonAjaxInterface;
 		this.bookSeriesDO = bookSeriesDO;
 		this.issue = issue;
+		this.volumeWithIssueDO = volumeWithIssueDO;
 
 		const volumesCOL = this.bookSeriesDO.getVolumes();
 
@@ -503,14 +504,18 @@ window.BookSeriesIssueItem = Object.extends({
 				.appendTo(this.$actions)
 				.find("ul")
 				;
-
 			for (var i = 1; i < actions.length; i++) {
 				let action = actions[i];
-				this.generateDropdownActionItem(
-					action.label,
-					action.icon,
-					action.callback ?? (() => window.open(action.url, "_blank"))
-				).appendTo($dropdownActions);
+				if (action.divider) {
+					this.generateDropdownActionItemDivider()
+						.appendTo($dropdownActions);
+				} else {
+					this.generateDropdownActionItem(
+						action.label,
+						action.icon,
+						action.callback ?? (() => window.open(action.url, "_blank"))
+						).appendTo($dropdownActions);
+				}
 			}
 		} else if (actions?.length) {
 			this.generateButton(
@@ -541,7 +546,7 @@ window.BookSeriesIssueItem = Object.extends({
 		  <button class="btn btn-inverse btn-mini dropdown-toggle" data-toggle="dropdown">
 		    <span class="caret"></span>
 		  </button>
-		  <ul class="dropdown-menu pull-right text-right">
+		  <ul class="dropdown-menu pull-right ">
 		    <!-- dropdown menu links -->
 		  </ul>
 		</div>`);
@@ -570,6 +575,9 @@ window.BookSeriesIssueItem = Object.extends({
 		$a.appendText(label);
 		return $li;
 	},
+	generateDropdownActionItemDivider: function(label, iconName, action) {
+		return jQuery('<li class="divider">');
+	},
 
 
 	// For sorting
@@ -579,12 +587,14 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.AwaitingStoreAvailability:
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
+			case BookSeriesIssue.NoLocalStoreReferences:
 				return this.firstUnownedVolume?.getReleaseDateMoment()?.unix() ?? Infinity;
 
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
 				return this.bookSeriesDO.getNextVolumeExpectedDateUncorrected()?.unix() ?? 0;
-				
+			
+			case BookSeriesIssue.NoSourceStoreReferences:
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
 				return this.bookSeriesDO.getNextSourceVolumeExpectedDateUncorrected()?.unix() ?? Infinity;
@@ -603,6 +613,18 @@ window.BookSeriesIssueItem = Object.extends({
 				{
 					const date = this.firstUnownedVolume.getReleaseDateMoment()?.fromNow() ?? '';
 					return `Vol. ${this.firstUnownedColorder} ${date}`;
+				}
+			
+			case BookSeriesIssue.NoLocalStoreReferences:
+				{
+					if (this.volumeWithIssueDO) {
+						const colorder = this.volumeWithIssueDO.getColorder();
+						const date = this.volumeWithIssueDO.getReleaseDateMoment()?.fromNow();
+						return `Vol. ${colorder} ${date}`;
+					} else {
+						const note = this.bookSeriesDO.getForcednotes();
+						return note ? `Note: ${this.bookSeriesDO.getForcednotes()}` : '';
+					}
 				}
 
 			case BookSeriesIssue.WaitingForLocal:
@@ -626,6 +648,17 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.LocalVolumeOverdue:
 				return `Vol. ${this.firstUnownedColorder} overdue ${this.bookSeriesDO.getOverdueText()}`;
 				
+			case BookSeriesIssue.NoSourceStoreReferences:
+				{
+					if (this.volumeWithIssueDO) {
+						const colorder = this.volumeWithIssueDO.getColorder();
+						const date = this.volumeWithIssueDO.getReleaseDateSourceMoment()?.fromNow();
+						return `Vol. ${colorder} ${date}`;
+					} else {
+						const note = this.bookSeriesDO.getForcednotes();
+						return note ? `Note: ${this.bookSeriesDO.getForcednotes()}` : '';
+					}
+				}
 			case BookSeriesIssue.WaitingForSource:
 				if (this.lastVolume) {
 					const prevVolumeColorder = this.lastVolume.getColorder();
@@ -654,6 +687,8 @@ window.BookSeriesIssueItem = Object.extends({
 	getActions: function() {
 		// Array<{ url?: string, callback?: () => void, label: string }>
 		let actions = null;
+		let lastActionsLength = 0;
+
 		switch (this.issue) {
 			case BookSeriesIssue.AwaitingDigitalVersion:
 			case BookSeriesIssue.VolumeAvailable:
@@ -664,9 +699,15 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.LocalVolumeOverdue:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
 				break;
+			case BookSeriesIssue.NoLocalStoreReferences:
+				actions = this.bookSeriesDO.getStoreSearchActions(this.volumeWithIssueDO.getColorder());
+				break;
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.nextVolumeColorder);
+				break;
+			case BookSeriesIssue.NoSourceStoreReferences:
+				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.volumeWithIssueDO.getColorder());
 				break;
 			case BookSeriesIssue.AwaitingStoreAvailability:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
@@ -688,6 +729,12 @@ window.BookSeriesIssueItem = Object.extends({
 		}
 
 		if (!Array.isArray(actions)) { actions = []; }
+		
+		if (actions.length > lastActionsLength) {
+			actions.push({ divider: true });
+			lastActionsLength = actions.length;
+		}
+
 
 		if (this.bookSeriesDO.canResolveIssueWithAsin(this.issue)) {
 			actions.push({
@@ -723,7 +770,7 @@ window.BookSeriesIssueItem = Object.extends({
 			});
 		}
 
-		if (this.bookSeriesDO.canResolveIssueWithStatus(this.issue)) {
+		if (this.bookSeriesDO.canResolveIssueWithVolumeStatus(this.issue)) {
 			actions.push({
 				label: "Set status",
 				icon: "icon-chevron-right",
@@ -735,7 +782,7 @@ window.BookSeriesIssueItem = Object.extends({
 							;
 						const status = prompt("Status to resolve:\n"+legend);
 						if (!status) { return; }
-						this.bookSeriesDO.resolveIssueWithStatus(this.issue, status);
+						this.bookSeriesDO.resolveIssueWithVolumeStatus(this.issue, status);
 						this.save();
 					} catch(err) {
 						alert(err.message);
@@ -767,6 +814,23 @@ window.BookSeriesIssueItem = Object.extends({
 			});
 		}
 
+		if (actions.length > lastActionsLength) {
+			lastActionsLength = actions.length;
+			actions.push({ divider: true });
+		}
+
+		actions.push({
+			label: "Edit notes",
+			icon: "icon-pencil",
+			callback: () => {
+				const ret = this.bookSeriesDO.promptForForcedNotes();
+				if (ret) {
+					this.save();
+				}
+				
+			}
+		});
+
 		if (this.bookSeriesDO.canShowPublicationGraph()) {
 			actions.push({
 				label: "Publication graph",
@@ -780,6 +844,10 @@ window.BookSeriesIssueItem = Object.extends({
 					
 				}
 			});
+		}
+
+		if (actions[1]?.divider) {
+			actions.splice(1, 1);
 		}
 
 		return actions;
@@ -824,7 +892,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 			});
 			if (issueInfo) {
 				const [issue, volumeDO] = issueInfo;
-				const issueobj = new BookSeriesIssueItem(this, bookSeriesDO, issue);
+				const issueobj = new BookSeriesIssueItem(this, bookSeriesDO, issue, volumeDO);
 				issues.push(issueobj);
 			}
 
@@ -918,8 +986,10 @@ window.bookSeriesAjaxInterface = Object.extends({
 				BookSeriesIssue.PreorderAvailable,
 				BookSeriesIssue.AwaitingStoreAvailability,
 				BookSeriesIssue.AwaitingDigitalVersion,
+				BookSeriesIssue.NoLocalStoreReferences,
 				BookSeriesIssue.WaitingForLocal,
 				BookSeriesIssue.LocalVolumeOverdue,
+				BookSeriesIssue.NoSourceStoreReferences,
 				BookSeriesIssue.WaitingForSource,
 				BookSeriesIssue.SourceVolumeOverdue,
 			].filter(x => existingIssueTypesUnsorted.indexOf(x) !== -1);

@@ -271,6 +271,8 @@
 		LocalVolumeOverdue: 7, // Some heuristics here
 		SourceVolumeOverdue: 8, // Some heuristics here
 		MissingInformation: 9,
+		NoLocalStoreReferences: 10,
+		NoSourceStoreReferences: 11,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -284,6 +286,8 @@
 			case BookSeriesIssue.LocalVolumeOverdue: return 'Local volume overdue';
 			case BookSeriesIssue.SourceVolumeOverdue: return 'Source volume overdue';
 			case BookSeriesIssue.MissingInformation: return 'Missing information';
+			case BookSeriesIssue.NoLocalStoreReferences: return 'No local store';
+			case BookSeriesIssue.NoSourceStoreReferences: return 'No source store';
 			default: return 'Unknown issue';
 		}
 	}
@@ -424,15 +428,15 @@
 
 				if (koboLink && store === BookSeriesDO.Enum.Store.Kobo) {
 					values = [
-						{ url: koboLink, label: "View on Kobo" },
-						{ url: amazonLink, label: "View on Amazon" },
-						{ url: amazonJpLink, label: "View on Amazon JP" },
+						{ url: koboLink, label: "View on Kobo", icon: 'icon-book', },
+						{ url: amazonLink, label: "View on Amazon", icon: 'icon-book', },
+						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', },
 					];
 				} else {
 					values = [
-						{ url: amazonLink, label: "View on Amazon" },
-						{ url: koboLink, label: "View on Kobo" },
-						{ url: amazonJpLink, label: "View on Amazon JP" },
+						{ url: amazonLink, label: "View on Amazon", icon: 'icon-book', },
+						{ url: koboLink, label: "View on Kobo", icon: 'icon-book', },
+						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', },
 					];
 				}
 
@@ -476,6 +480,21 @@
 					(status !== BookSeriesVolumeDO.Enum.Status.Source && !this.getReleaseDate())
 				);
 				*/
+			},
+
+			isNoLocalStoreReferences: function() {
+				return (
+					this.getReleaseDate()
+					&& !this.getAsin()
+					&& !this.getKoboId()
+				);
+			},
+
+			isNoSourceStoreReferences: function() {
+				return (
+					this.getReleaseDateSource()
+					&& !this.getSourceAsin()
+				);
 			},
 
 			canScrapeForPubDates: function(){
@@ -1540,29 +1559,44 @@
 			},
 
 			getStoreSearchActions: function(volumeNumber) {
-				const store = this.getStore();
-				const koboLink = this.getKoboSearchLink(volumeNumber);
-				const amazonLink = this.getKindleSearchLink(volumeNumber, false); 
-				const amazonTpbLink = this.getKindleSearchLink(volumeNumber, true); 
-				const rightstufLink = this.getRightstufSearchLink(volumeNumber);
+				const volume = this.getVolumeWithOrder(volumeNumber);
+				const koboLink = 
+					(
+						(!volume || !volume?.getKoboId())
+						&& this.getStore() === BookSeriesDO.Enum.Store.Kobo
+					)
+					? this.getKoboSearchLink(volumeNumber)
+					: null
+					;
+				const amazonLink = 
+					(!volume || !volume?.getAsin())
+					? this.getKindleSearchLink(volumeNumber, false)
+					: null
+					;
+				const amazonTpbLink =
+					(!volume || !volume?.getAsin())
+					? this.getKindleSearchLink(volumeNumber, true)
+					: null
+					;
+				const rightstufLink =
+					(!volume || !volume?.getReleaseDate())
+					? this.getRightstufSearchLink(volumeNumber)
+					: null
+					;
 
-				let values = [];
-
-				if (store === BookSeriesDO.Enum.Store.Kobo) {
-					values = [
-						{ url: koboLink, label: "Search on Kobo" },
-						{ url: amazonLink, label: "Search on Amazon" },
-						{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
-						{ url: rightstufLink, label: "Search on Rightstuf" },
-					];
-				} else {
-					values = [
-						{ url: amazonLink, label: "Search on Amazon" },
-						{ url: amazonTpbLink, label: "Search on Amazon (TPB)" },
-						{ url: koboLink, label: "Search on Kobo" },
-						{ url: rightstufLink, label: "Search on Rightstuf" },
-					];
-				}
+				const googleAmazonLink =
+					(!volume || !volume?.getAsin())
+					? this.getGoogleKindleSearchLink(volumeNumber)
+					: null
+					;
+				
+				const values = [
+					{ url: amazonLink, label: "Search on Amazon", icon: 'icon-shopping-cart', },
+					{ url: amazonTpbLink, label: "Search on Amazon (TPB)", icon: 'icon-shopping-cart', },
+					{ url: koboLink, label: "Search on Kobo", icon: 'icon-shopping-cart', },
+					{ url: rightstufLink, label: "Search on Rightstuf", icon: 'icon-shopping-cart', },
+					{ url: googleAmazonLink, label: "Search on Amazon w/Google", icon: 'icon-search', },
+				];
 
 				return values.filter(x => !!x.url);
 			},
@@ -1570,10 +1604,12 @@
 			getSourceStoreSearchActions: function(volumeNumber) {
 				const amazonLink = this.getKindleSearchLinkSource(volumeNumber, false); 
 				const amazonTpbLink = this.getKindleSearchLinkSource(volumeNumber, true); 
+				const googleAmazonLink = this.getGoogleKindleSearchLinkSource(volumeNumber);
 
 				return [
-					{ url: amazonLink, label: "Search on Amazon JP" },
-					{ url: amazonTpbLink, label: "Search on Amazon JP (TPB)" },
+					{ url: amazonLink, label: "Search on Amazon JP", icon: 'icon-shopping-cart', },
+					{ url: amazonTpbLink, label: "Search on Amazon JP (TPB)", icon: 'icon-shopping-cart', },
+					{ url: googleAmazonLink, label: "Search on Amazon JP w/Google", icon: 'icon-search', },
 				].filter(x => !!x.url);
 			},
 
@@ -1601,6 +1637,22 @@
 				} else {
 					return "https://www.amazon.co.jp/gp/search/?search-alias=digital-text&keywords="+encodeURIComponent(kss);
 				}
+			},
+			getGoogleKindleSearchLink: function(volumeNumber){
+				var kss = this.getKindleSearchString();
+				if (!kss) { return null; }
+				if (volumeNumber) {
+					kss += " "+volumeNumber;
+				}
+				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.com`;
+			},
+			getGoogleKindleSearchLinkSource: function(volumeNumber){
+				var kss = this.getKindleSearchStringSource();
+				if (!kss) { return null; }
+				if (volumeNumber) {
+					kss += " "+volumeNumber;
+				}
+				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.co.jp`;
 			},
 			getKoboSearchLink: function(volumeNumber){
 				var kss = this.getKindleSearchString();
@@ -1653,6 +1705,9 @@
 				_col = BookSeriesVolumeDO.COL(_col);
 				_col = this._afterInstanceVolumes(_col);
 				return _col;
+			},
+			getVolumeWithOrder: function(colorder){
+				return this.getVolumes().get(colorder);
 			},
 			_afterInstanceVolumes: function(_col){
 				_col.sort();
@@ -1728,7 +1783,29 @@
 					const volumeDO = volumesCOL[i];
 
 					if (volumeDO.isMissingDateInformation()) {
-						return true;
+						return volumeDO;
+					}
+				}
+				return false;
+			},
+			isAnyVolumeNoLocalStoreReferences: function() {
+				const volumesCOL = this.getVolumes();
+				for (var i = 0; i < volumesCOL.length; i++) {
+					const volumeDO = volumesCOL[i];
+
+					if (volumeDO.isNoLocalStoreReferences()) {
+						return volumeDO;
+					}
+				}
+				return false;
+			},
+			isAnyVolumeNoSourceStoreReferences: function() {
+				const volumesCOL = this.getVolumes();
+				for (var i = 0; i < volumesCOL.length; i++) {
+					const volumeDO = volumesCOL[i];
+
+					if (volumeDO.isNoSourceStoreReferences()) {
+						return volumeDO;
 					}
 				}
 				return false;
@@ -1754,7 +1831,8 @@
 				const statusesToIgnore = [
 					BookSeriesDO.Enum.Status.Drop,
 					BookSeriesDO.Enum.Status.Consider,
-					BookSeriesDO.Enum.Status.Unlicensed
+					BookSeriesDO.Enum.Status.Unlicensed,
+					BookSeriesDO.Enum.Status.Ended,
 				];
 
 				if (this.hasStatus(statusesToIgnore)) {
@@ -1762,7 +1840,10 @@
 				}
 
 				if (this.isAnyVolumeMissingDateInformation()) {
-					return [BookSeriesIssue.MissingInformation, null];
+					return [
+						BookSeriesIssue.MissingInformation,
+						this.isAnyVolumeMissingDateInformation()
+					];
 				}
 
 				if (seriesStatus === BookSeriesDO.Enum.Status.Backlog && options.ignoreAllIssuesOnBacklog) {
@@ -1772,6 +1853,26 @@
 				const firstUnowned = this.getFirstUnownedVolume();
 				const firstUnownedStatus = firstUnowned?.getStatus() ?? null;
 				const isFinishedPublication = this.isFinishedPublication();
+
+
+
+				// NoLocalStoreReferences
+				// isNoLocalStoreReferences
+				// isAnyVolumeNoLocalStoreReferences
+
+				if (this.isAnyVolumeNoLocalStoreReferences()) {
+					return [
+						BookSeriesIssue.NoLocalStoreReferences,
+						this.isAnyVolumeNoLocalStoreReferences()
+					];
+				}
+
+				if (this.isAnyVolumeNoSourceStoreReferences()) {
+					return [
+						BookSeriesIssue.NoSourceStoreReferences,
+						this.isAnyVolumeNoSourceStoreReferences()
+					];
+				}
 
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.TPB) {
 					return [BookSeriesIssue.AwaitingDigitalVersion, firstUnowned];
@@ -1795,6 +1896,13 @@
 					} else {
 						return [BookSeriesIssue.VolumeAvailable, firstUnowned];
 					}
+				}
+
+				if (this.isAnyVolumeNoSourceStoreReferences()) {
+					return [
+						BookSeriesIssue.NoSourceStoreReferences,
+						this.isAnyVolumeNoSourceStoreReferences()
+					];
 				}
 
 				const graphData = this.getPublicationGraphData();
@@ -1835,26 +1943,32 @@
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.LocalVolumeOverdue:
 					case BookSeriesIssue.SourceVolumeOverdue:
+					case BookSeriesIssue.NoLocalStoreReferences:
+					case BookSeriesIssue.NoSourceStoreReferences:
 						return true;
 					case BookSeriesIssue.AwaitingStoreAvailability:
 						return (this.getStore() === BookSeriesDO.Enum.Store.Kindle);
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
+						return false;
 					default:
 						return false;
 				}
 			},
-			canResolveIssueWithStatus: function(issue) {
+			canResolveIssueWithVolumeStatus: function(issue) {
 				switch(issue) {
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
+					case BookSeriesIssue.AwaitingStoreAvailability:
 						return true;
+					case BookSeriesIssue.NoSourceStoreReferences:
+					case BookSeriesIssue.NoLocalStoreReferences:
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.WaitingForSource:
-					case BookSeriesIssue.AwaitingStoreAvailability:
 					case BookSeriesIssue.LocalVolumeOverdue:
 					case BookSeriesIssue.SourceVolumeOverdue:
+						return false;
 					default:
 						return false;
 				}
@@ -1864,6 +1978,7 @@
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.NoLocalStoreReferences:
 						return true;
 					case BookSeriesIssue.AwaitingStoreAvailability:
 						return (this.getStore() === BookSeriesDO.Enum.Store.Kobo);
@@ -1871,6 +1986,8 @@
 					case BookSeriesIssue.SourceVolumeOverdue:
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
+					case BookSeriesIssue.NoSourceStoreReferences:
+						return false;
 					default:
 						return false;
 				}
@@ -1882,6 +1999,8 @@
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
 						return true;
+					case BookSeriesIssue.NoLocalStoreReferences:
+					case BookSeriesIssue.NoSourceStoreReferences:
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.AwaitingStoreAvailability:
 					case BookSeriesIssue.VolumeAvailable:
@@ -1901,10 +2020,49 @@
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
-						const firstUnowned = this.getFirstUnownedVolume();
-						firstUnowned.setAsin(asin);
-						firstUnowned.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
-						this.saveUpdatedVolume(firstUnowned, true);
+						{
+							const volumeDO = this.getFirstUnownedVolume();
+							volumeDO.setAsin(asin);
+							if (asin.startsWith("B")) {
+								if ([
+										BookSeriesDO.Enum.Store.Kindle,
+										BookSeriesDO.Enum.Store.JNC,
+									].includes(this.getStore())) {
+									volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
+								} else {
+									volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
+								}
+							} else {
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.TPB);
+							}
+							this.saveUpdatedVolume(volumeDO, true);
+						}
+						break;
+					case BookSeriesIssue.NoLocalStoreReferences:
+						{
+							const volumeDO = this.isAnyVolumeNoLocalStoreReferences();
+							volumeDO.setAsin(asin);
+							if (asin.startsWith("B")) {
+								if ([
+									BookSeriesDO.Enum.Store.Kindle,
+									BookSeriesDO.Enum.Store.JNC,
+								].includes(this.getStore())) {
+									volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
+								} else {
+									volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
+								}
+							} else {
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.TPB);
+							}
+							this.saveUpdatedVolume(volumeDO, true);
+						}
+						break;
+					case BookSeriesIssue.NoSourceStoreReferences:
+						{
+							const volumeDO = this.isAnyVolumeNoSourceStoreReferences();
+							volumeDO.setSourceAsin(asin);
+							this.saveUpdatedVolume(volumeDO, true);
+						}
 						break;
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
@@ -1931,10 +2089,34 @@
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
-						const firstUnowned = this.getFirstUnownedVolume();
-						firstUnowned.setKoboId(koboId);
-						firstUnowned.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
-						this.saveUpdatedVolume(firstUnowned, true);
+						{
+							const volumeDO = this.getFirstUnownedVolume();
+							volumeDO.setKoboId(koboId);
+							if ([
+								BookSeriesDO.Enum.Store.Kobo,
+								BookSeriesDO.Enum.Store.JNC,
+							].includes(this.getStore())) {
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
+							} else {
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
+							}
+							this.saveUpdatedVolume(volumeDO, true);
+						}
+						break;
+					case BookSeriesIssue.NoLocalStoreReferences:
+						{
+							const volumeDO = this.isAnyVolumeNoLocalStoreReferences();
+							volumeDO.setKoboId(koboId);
+							if ([
+								BookSeriesDO.Enum.Store.Kobo,
+								BookSeriesDO.Enum.Store.JNC,
+							].includes(this.getStore())) {
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Available);
+							} else {
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
+							}
+							this.saveUpdatedVolume(volumeDO, true);
+						}
 						break;
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
@@ -1951,14 +2133,13 @@
 				switch(issue) {
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
-					case BookSeriesIssue.AwaitingStoreAvailability:
 					case BookSeriesIssue.LocalVolumeOverdue:
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
 						throw new Error("Can't resolve this issue with a status");
-						break;
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
+					case BookSeriesIssue.AwaitingStoreAvailability:
 						const firstUnowned = this.getFirstUnownedVolume();
 						firstUnowned.setStatus(newVolumeStatus);
 						this.saveUpdatedVolume(firstUnowned, true);
@@ -2326,6 +2507,16 @@
 				}
 
 				return false;
+			},
+
+			promptForForcedNotes: function(){
+				var notes = this.getForcednotes();
+				var newnotes = prompt("Edit notes", notes);
+				if (notes === newnotes || newnotes === null) {
+					return false;
+				}
+				this.setForcednotes(newnotes);
+				return true;
 			},
 
 
@@ -3344,12 +3535,7 @@
 
 							addSeparator();
 							addOption().html('<i class="icon-pencil"></i> Edit notes').click(changeCb(function(e){
-								var notes = this.getForcednotes();
-								var newnotes = prompt("Edit notes", notes);
-								if (notes === newnotes || newnotes === null) {
-									return false;
-								}
-								this.setForcednotes(newnotes);
+								return this.promptForForcedNotes();
 							}.bind(this)));
 							addOption().html('<i class="icon-pencil"></i> Edit link').click(changeCb(function(e){
 								var link = this.getLink();

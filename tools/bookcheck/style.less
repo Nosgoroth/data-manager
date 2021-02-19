@@ -98,6 +98,16 @@
 			padding: 6px 6px 6px 7px;
 			border-top: 1px dashed #F7F7F7;
 			clear: both;
+			position: relative;
+
+			&:hover:after {
+				display: block;
+				content: " ";
+				position: absolute;
+				top: 0; bottom: 0; left: 0; right: 0;
+				background: rgba(255,255,255,0.1);
+				pointer-events: none;
+			}
 
 			&:first-child {
 				border-top-color: transparent;
@@ -112,6 +122,8 @@
 			&[data-issuetype="7"] { background-color: #6e0c0c; } // LocalVolumeOverdue
 			&[data-issuetype="8"] { background-color: #640880; } // SourceVolumeOverdue
 			&[data-issuetype="9"] { background-color: #0a3b63; } // MissingInformation
+			&[data-issuetype="10"] { background-color: #613004; } // NoLocalStoreReferences
+			&[data-issuetype="11"] { background-color: #610438; } // NoSourceStoreReferences
 
 			.title {
 				.name {}
