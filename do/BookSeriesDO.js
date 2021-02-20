@@ -3155,15 +3155,15 @@
 						return;
 					}
 
-					var monthkey = _d.startOf('isoWeek').format("YYYY-WW");
+					var monthkey = moment(_d).startOf('isoWeek').format("YYYY-WW");
 					if (!months[monthkey]) {
 						months[monthkey] = {
 							volumes: [],
 							date: _d,
 							month: parseInt(_d.format("MM")),
 							weekNumber: parseInt(_d.format("W")),
-							weekStart: _d.startOf('isoweek').format("DD/MMM"),
-							weekEnd: _d.endOf('isoweek').format("DD/MMM"),
+							weekStart: moment(_d).startOf('isoweek').format("DD/MMM"),
+							weekEnd: moment(_d).endOf('isoweek').format("DD/MMM"),
 							monthName: _d.format("MMMM"),
 							year: parseInt(_d.format("YYYY")),
 						};
