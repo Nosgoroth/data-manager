@@ -3130,7 +3130,7 @@
 						return;
 					}
 
-					var monthkey = _d.endOf('isoweek').format("YYYY-WW");
+					var monthkey = _d.startOf('isoWeek').format("YYYY-WW");
 					if (!months[monthkey]) {
 						months[monthkey] = {
 							volumes: [],
