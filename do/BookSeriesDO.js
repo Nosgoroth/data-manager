@@ -2860,7 +2860,7 @@
 					BookSeriesDO.Enum.Status.Unlicensed,
 					BookSeriesDO.Enum.Status.Prepub,
 				];
-				const isStatusSticky = (stickyStatuses.indexOf(seriesStatus) !== -1);
+				let isStatusSticky = (stickyStatuses.indexOf(seriesStatus) !== -1);
 
 				var volumesCOL = this.getVolumes();
 				if (volumesCOL.length > 0) {
@@ -2958,6 +2958,10 @@
 
 				if (this.getForcednotes()) {
 					this.setNotes(this.getForcednotes()+" (!)");
+				}
+
+				if (seriesStatus === BookSeriesDO.Enum.Status.Announced && read+owned+preordered > 0) {
+					isStatusSticky = false;
 				}
 
 				//Automatically set new status for valid (non-sticky) statuses
