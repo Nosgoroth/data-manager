@@ -100,6 +100,11 @@
 			clear: both;
 			position: relative;
 
+			display: flex;
+			flex-flow: row nowrap;
+			/*justify-content: space-between;*/
+
+
 			&:hover:after {
 				display: block;
 				content: " ";
@@ -126,7 +131,7 @@
 			&[data-issuetype="11"] { background-color: #610438; } // NoSourceStoreReferences
 
 			.title {
-				.name {}
+				flex-grow: 1;
 				.date {
 					margin-left: 4px;
 					font-size: 0.8em;
