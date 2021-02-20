@@ -820,12 +820,12 @@
 				return this.makeDateShort(d);
 			},
 			getReleaseDateLong: function(){
-				return this.getBestReleaseDateMoment().format("D MMM YY");
-			},
-			getReleaseDateSortable: function(){
 				return this.makeDateLong(
 					this.getBestReleaseDateMoment()
 				);
+			},
+			getReleaseDateSortable: function(){
+				return this.getBestReleaseDateMoment().format("YYYY-MM-DD");
 			},
 
 			getReadDateMoment: function() {
