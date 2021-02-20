@@ -1819,12 +1819,36 @@
 				return (status.indexOf(seriesStatus) !== -1);
 			},
 
-			getIssue: function(options){
+			getIssues: function(options) {
+				return [
+					this.getIssueMissingInformation(options),
+					this.getIssueLocal(options),
+					this.getIssueSource(options),
+				].filter(x => !!x);
+			},
 
+			// Legacy
+			getIssue: function(){
+				return this.getIssues()[0] ?? null;
+			},
+
+			ShouldIgnoreIssuesType: {
+				Other: 0,
+				Local: 1,
+				Source: 2,
+				MissingInformation: 3,
+			},
+
+			shouldIgnoreIssues: function(type, options) {
 				options = options ? options : {};
 
 				if (this.isIgnoreIssues()) {
-					return null;
+					return true;
+				}
+
+				if (type === this.ShouldIgnoreIssuesType.MissingInformation) {
+					//Stop looking for reasons to ignore if it's MissingInformation
+					return false;
 				}
 
 				const seriesStatus = this.getStatus();
@@ -1836,41 +1860,68 @@
 				];
 
 				if (this.hasStatus(statusesToIgnore)) {
+					return true;
+				}
+
+				if (
+					seriesStatus === BookSeriesDO.Enum.Status.Backlog
+					&& options.ignoreAllIssuesOnBacklog
+					) {
+					return true;
+				}
+				if (
+					type === this.ShouldIgnoreIssuesType.Local
+					&& seriesStatus === BookSeriesDO.Enum.Status.Backlog
+					&& options.ignoreLocalIssuesOnBacklog
+					) {
+					return true;
+				}
+				if (
+					type === this.ShouldIgnoreIssuesType.Source
+					&& seriesStatus === BookSeriesDO.Enum.Status.Backlog
+					&& options.ignoreSourceIssuesOnBacklog
+					) {
+					return true;
+				}
+
+				return false;
+			},
+
+			getIssueMissingInformation: function(options) {
+				options = options ? options : {};
+
+				if (this.shouldIgnoreIssues(this.ShouldIgnoreIssuesType.MissingInformation, options)) {
 					return null;
 				}
 
-				if (this.isAnyVolumeMissingDateInformation()) {
+				// Issue is never ignored
+				const volume = this.isAnyVolumeMissingDateInformation();
+				if (volume) {
 					return [
 						BookSeriesIssue.MissingInformation,
-						this.isAnyVolumeMissingDateInformation()
+						volume
 					];
 				}
+				
+				return null;
+			},
 
-				if (seriesStatus === BookSeriesDO.Enum.Status.Backlog && options.ignoreAllIssuesOnBacklog) {
+			getIssueLocal: function(options){
+				options = options ? options : {};
+
+				if (this.shouldIgnoreIssues(this.ShouldIgnoreIssuesType.Local, options)) {
 					return null;
 				}
 
 				const firstUnowned = this.getFirstUnownedVolume();
 				const firstUnownedStatus = firstUnowned?.getStatus() ?? null;
-				const isFinishedPublication = this.isFinishedPublication();
+				const seriesStatus = this.getStatus();
 
-
-
-				// NoLocalStoreReferences
-				// isNoLocalStoreReferences
-				// isAnyVolumeNoLocalStoreReferences
-
-				if (this.isAnyVolumeNoLocalStoreReferences()) {
+				const noLocalStoreVolume = this.isAnyVolumeNoLocalStoreReferences();
+				if (noLocalStoreVolume) {
 					return [
 						BookSeriesIssue.NoLocalStoreReferences,
-						this.isAnyVolumeNoLocalStoreReferences()
-					];
-				}
-
-				if (this.isAnyVolumeNoSourceStoreReferences()) {
-					return [
-						BookSeriesIssue.NoSourceStoreReferences,
-						this.isAnyVolumeNoSourceStoreReferences()
+						noLocalStoreVolume
 					];
 				}
 
@@ -1889,19 +1940,39 @@
 					const releaseDate = firstUnowned.getReleaseDateMoment();
 					const now = moment();
 					if (releaseDate.isAfter(now)) {
-						if (seriesStatus === BookSeriesDO.Enum.Status.Announced && options.ignorePreorderAvailableForAnnounced) {
-							return null;
+						if (!(seriesStatus === BookSeriesDO.Enum.Status.Announced && options.ignorePreorderAvailableForAnnounced)) {
+							return [BookSeriesIssue.PreorderAvailable, firstUnowned];
 						}
-						return [BookSeriesIssue.PreorderAvailable, firstUnowned];
 					} else {
 						return [BookSeriesIssue.VolumeAvailable, firstUnowned];
 					}
 				}
 
-				if (this.isAnyVolumeNoSourceStoreReferences()) {
+				const graphData = this.getPublicationGraphData();
+
+				if (this.isLocalVolumeOverdue(graphData, 60*60*24*30)) {
+					return [BookSeriesIssue.LocalVolumeOverdue];
+				}
+
+				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Source) {
+					return [BookSeriesIssue.WaitingForLocal];
+				}
+
+				return null;
+			},
+
+			getIssueSource: function(options){
+				options = options ? options : {};
+
+				if (this.shouldIgnoreIssues(this.ShouldIgnoreIssuesType.Source, options)) {
+					return null;
+				}
+
+				const noSourceStoreVolume = this.isAnyVolumeNoSourceStoreReferences();
+				if (noSourceStoreVolume) {
 					return [
 						BookSeriesIssue.NoSourceStoreReferences,
-						this.isAnyVolumeNoSourceStoreReferences()
+						noSourceStoreVolume
 					];
 				}
 
@@ -1912,28 +1983,16 @@
 					return [BookSeriesIssue.SourceVolumeOverdue];
 				}
 
-
-				if (this.isLocalVolumeOverdue(graphData, 60*60*24*30)) {
-					return [BookSeriesIssue.LocalVolumeOverdue];
-				}
-
-				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Source) {
-					return [BookSeriesIssue.WaitingForLocal];
-				}
+				const firstUnowned = this.getFirstUnownedVolume();
+				const isFinishedPublication = this.isFinishedPublication();
+				const seriesStatus = this.getStatus();
 
 				if (!firstUnowned && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended) && !hasNoSource) {
 					return [BookSeriesIssue.WaitingForSource];
 				}
-				/*
-				BookSeriesIssue:
-					AwaitingDigitalVersion = First unowned volume is TPB
-					VolumeAvailable = First unowned volume is Available
-										and series isn't Backlog
-					WaitingForLocal = First unowned volume is Source
-					WaitingForSource = All volumes owned and series isn't Ended
-				*/
 
 				return null;
+
 			},
 
 			canResolveIssueWithAsin: function(issue) {

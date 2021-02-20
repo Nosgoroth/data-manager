@@ -866,43 +866,39 @@ window.bookSeriesAjaxInterface = Object.extends({
 	rerender: function(){
 		this.JsonAjaxInterface_afterDataReady();
 	},
+
+	_issuesOptions: {
+		ignoreLocalIssuesOnBacklog: true,
+		ignorePreorderAvailableForAnnounced: true,
+	}, // Defaults
+	setIssuesOptions: function(options) {
+		console.log("Using custom issue options:", options);
+		this._issuesOptions = options;
+	},
+	getIssuesOptions: function(){
+		return Object.assign({}, this._issuesOptions);
+	},
+
 	JsonAjaxInterface_afterDataReady: async function(){
 
 		window._ajaxBookseriesUri = "../../ajax_bookseries.php";
 		
 		const vtpbs = [];
 		let issues = [];
-		let sourceOverdue = [];
 
-		const statusesToIgnore = [
-			BookSeriesDO.Enum.Status.Drop,
-			BookSeriesDO.Enum.Status.Consider,
-			BookSeriesDO.Enum.Status.Unlicensed
-		];
+		const issuesOptions = this.getIssuesOptions();
 
 		this._COL.forEach(bookSeriesDO => {
 
 			if (bookSeriesDO.isIgnoreIssues()) {
 				return;
 			}
-
-			const issueInfo = bookSeriesDO.getIssue({
-				ignoreAllIssuesOnBacklog: true,
-				ignorePreorderAvailableForAnnounced: true,
-			});
-			if (issueInfo) {
+			
+			const issuesInfo = bookSeriesDO.getIssues(issuesOptions);
+			for (const issueInfo of issuesInfo) {
 				const [issue, volumeDO] = issueInfo;
 				const issueobj = new BookSeriesIssueItem(this, bookSeriesDO, issue, volumeDO);
 				issues.push(issueobj);
-			}
-
-			if (!bookSeriesDO.hasStatus(statusesToIgnore) && bookSeriesDO.isSourceVolumeOverdue()) {
-				const issueobj = new BookSeriesIssueItem(
-					this,
-					bookSeriesDO,
-					BookSeriesIssue.SourceVolumeOverdue
-				);
-				sourceOverdue.push(issueobj);
 			}
 
 			const volumes = bookSeriesDO.getVolumes();
@@ -929,18 +925,6 @@ window.bookSeriesAjaxInterface = Object.extends({
 					alert("Error: couldn't save");
 				});
 			}, $tpbdigital);
-		}
-
-		{
-			sourceOverdue = sourceOverdue.sort((a, b) => {
-				return a.getDateUnix() - b.getDateUnix();
-			});
-			sourceOverdue.reverse();
-			const $overdue = jQuery("#source-overdue-app").empty();
-			const $ul = $overdue.appendR('<ul class="issues">');
-			for (const issue of sourceOverdue) {
-				issue.render().appendTo($ul);
-			}
 		}
 		
 

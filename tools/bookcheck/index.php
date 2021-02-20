@@ -40,17 +40,9 @@ if (file_exists('../../login.php')) {
 
 	<h3>Series with issues</h3>
 
-	<p>Issue types sorted by proximity to release. Excluding: backlog, preorders for new series. Local overdue has a 30 days lead-in time.</p>
+	<p>Issue types sorted by proximity to release. Local overdue has a 30 days lead-in time.</p>
 
 	<div id="issues-app"></div>
-
-	<hr/>
-
-	<h3>All series overdue on source track</h3>
-
-	<p>Regardless of any other higher priority issues they might have.</p>
-
-	<div id="source-overdue-app"></div>
 
 </div>
 
@@ -88,5 +80,12 @@ $fmt = @filemtime("main.js");
 $fmt = $fmt ? $fmt : 0;
 ?>
 <script type='text/javascript' src='main.js?t=<?= $fmt ?>'></script>
+<?php if (file_exists("issuesOptions.js")) { ?>
+	<?php
+	$fmt = @filemtime("issuesOptions.js");
+	$fmt = $fmt ? $fmt : 0;
+	?>
+	<script type='text/javascript' src='issuesOptions.js?t=<?= $fmt ?>'></script>
+<?php } ?>
 	
 </body></html>
