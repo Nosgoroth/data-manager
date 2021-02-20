@@ -262,7 +262,7 @@
 
 
 	window.BookSeriesIssue = {
-		AwaitingDigitalVersion: 1, // First unowned volume is TPB
+		AwaitingDigitalVersion: 1, // First unowned volume is Phys
 		VolumeAvailable: 2, // First unowned volume is Available and series isn't Backlog or Dropped
 		PreorderAvailable: 3,
 		WaitingForLocal: 4, // Next unowned volume is Source
@@ -324,7 +324,7 @@
 			orderLabel: "string",
 			asin: "string",
 			status: ["enum", [
-				"Read", "Backlog", "Preorder", "TPB",
+				"Read", "Backlog", "Preorder", "Phys",
 				"None", "Source", "Available", "StoreWait"
 			]],
 			notes: "string",
@@ -345,10 +345,21 @@
 			//prepubEndDate: "string",
 			mangaCalendarId: "string",
 			mangaCalendarEnabled: "boolean",
-			manualTpbKindleCheckOnly: "boolean",
+			manualPhysKindleCheckOnly: "boolean",
 			treatAsNotSequential: "boolean",
 		},
 		extraPrototype: {
+
+			isManualPhysKindleCheckOnly: function() {
+				return this.get("manualPhysKindleCheckOnly", false, "boolean")
+					|| this.get("manualTpbKindleCheckOnly", false, "boolean")
+					;
+			},
+			deleteManualPhysKindleCheckOnly: function(){
+				this.delete("manualPhysKindleCheckOnly");
+				this.delete("manualTpbKindleCheckOnly");
+			},
+
 			__construct: function(rawdata, parent, options){
 				if (typeof rawdata === "string") {
 					if (rawdata[0] === "{") {
@@ -762,7 +773,7 @@
 					case "read": return 1;
 					case "back": case "backlog": return 2;
 					case "pre": case "preorder": return 3;
-					case "tpb": return 4;
+					case "phys": return 4;
 					case "none": default: return 5;
 					case "source": case "src": case "jp": return 6;
 					case "available": case "avail": case "av": return 7;
@@ -837,7 +848,7 @@
 					case this.__static.Enum.Status.StoreWait:
 					case this.__static.Enum.Status.Available:
 					case this.__static.Enum.Status.Preorder:
-					case this.__static.Enum.Status.TPB:
+					case this.__static.Enum.Status.Phys:
 						return !!this.getBestReleaseDate();
 					case this.__static.Enum.Status.None:
 						return !!this.getNotes();
@@ -891,7 +902,7 @@
 						case this.__static.Enum.Status.StoreWait:
 						case this.__static.Enum.Status.Available:
 						case this.__static.Enum.Status.Preorder:
-						case this.__static.Enum.Status.TPB:
+						case this.__static.Enum.Status.Phys:
 							$notes.text( this.getReleaseDateShort() );
 							break;
 						default:
@@ -977,8 +988,8 @@
 					case this.__static.Enum.Status.StoreWait:
 						$status.show().find(".status").text("Wait for store");
 						break;
-					case this.__static.Enum.Status.TPB:
-						$status.show().find(".status").text("TPB");
+					case this.__static.Enum.Status.Phys:
+						$status.show().find(".status").text("Phys");
 						break;
 					case this.__static.Enum.Status.Source:
 						$status.show().find(".status").text("JP");
@@ -1083,11 +1094,11 @@
 					case this.__static.Enum.Status.Source:
 						addSetStatusOption(this.__static.Enum.Status.Preorder, "preorder");
 						addSetStatusOption(this.__static.Enum.Status.Available, "available");
-						addSetStatusOption(this.__static.Enum.Status.TPB, "TPB");
+						addSetStatusOption(this.__static.Enum.Status.Phys, "Phys");
 						addSetStatusOption(this.__static.Enum.Status.Backlog, "backlog");
 						addSetStatusOption(this.__static.Enum.Status.Read, "read");
 						break;
-					case this.__static.Enum.Status.TPB:
+					case this.__static.Enum.Status.Phys:
 						addSetStatusOption(this.__static.Enum.Status.Preorder, "preorder");
 						addSetStatusOption(this.__static.Enum.Status.Available, "available");
 						break;
@@ -1598,7 +1609,7 @@
 					? this.getKindleSearchLink(volumeNumber, false)
 					: null
 					;
-				const amazonTpbLink =
+				const amazonPhysLink =
 					(!volume || !volume?.getAsin())
 					? this.getKindleSearchLink(volumeNumber, true)
 					: null
@@ -1617,7 +1628,7 @@
 				
 				const values = [
 					{ url: amazonLink, label: "Search on Amazon", icon: 'icon-shopping-cart', },
-					{ url: amazonTpbLink, label: "Search on Amazon (TPB)", icon: 'icon-shopping-cart', },
+					{ url: amazonPhysLink, label: "Search on Amazon (Phys)", icon: 'icon-shopping-cart', },
 					{ url: koboLink, label: "Search on Kobo", icon: 'icon-shopping-cart', },
 					{ url: rightstufLink, label: "Search on Rightstuf", icon: 'icon-shopping-cart', },
 					{ url: googleAmazonLink, label: "Search on Amazon w/Google", icon: 'icon-search', },
@@ -1628,12 +1639,12 @@
 
 			getSourceStoreSearchActions: function(volumeNumber) {
 				const amazonLink = this.getKindleSearchLinkSource(volumeNumber, false); 
-				const amazonTpbLink = this.getKindleSearchLinkSource(volumeNumber, true); 
+				const amazonPhysLink = this.getKindleSearchLinkSource(volumeNumber, true); 
 				const googleAmazonLink = this.getGoogleKindleSearchLinkSource(volumeNumber);
 
 				return [
 					{ url: amazonLink, label: "Search on Amazon JP", icon: 'icon-shopping-cart', },
-					{ url: amazonTpbLink, label: "Search on Amazon JP (TPB)", icon: 'icon-shopping-cart', },
+					{ url: amazonPhysLink, label: "Search on Amazon JP (Phys)", icon: 'icon-shopping-cart', },
 					{ url: googleAmazonLink, label: "Search on Amazon JP w/Google", icon: 'icon-search', },
 				].filter(x => !!x.url);
 			},
@@ -1950,7 +1961,7 @@
 					];
 				}
 
-				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.TPB) {
+				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Phys) {
 					return [BookSeriesIssue.AwaitingDigitalVersion, firstUnowned];
 				}
 
@@ -2117,7 +2128,7 @@
 									volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
 								}
 							} else {
-								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.TPB);
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Phys);
 							}
 							this.saveUpdatedVolume(volumeDO, true);
 						}
@@ -2136,7 +2147,7 @@
 									volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
 								}
 							} else {
-								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.TPB);
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Phys);
 							}
 							this.saveUpdatedVolume(volumeDO, true);
 						}
@@ -2866,7 +2877,7 @@
 				if (volumesCOL.length > 0) {
 					read = 0; owned = 0; preordered = 0; available = 0;
 					var earliestPreorder = null;
-					var earliestPreorderIsTPB = false;
+					var earliestPreorderIsPhys = false;
 					var earliestPreorderIsSource = false;
 					var earliestPreorderIsSW = false;
 					for (var i = 0; i < volumesCOL.length; i++) {
@@ -2891,7 +2902,7 @@
 								available += 1;
 								// NO BREAK
 							case BookSeriesVolumeDO.Enum.Status.StoreWait:
-							case BookSeriesVolumeDO.Enum.Status.TPB:
+							case BookSeriesVolumeDO.Enum.Status.Phys:
 							case BookSeriesVolumeDO.Enum.Status.Source:
 								
 								var _release = volumeDO.getBestReleaseDateMoment();
@@ -2900,7 +2911,7 @@
 									break;
 								}
 								
-								var currentIsTPB = (status===BookSeriesVolumeDO.Enum.Status.TPB),
+								var currentIsPhys = (status===BookSeriesVolumeDO.Enum.Status.Phys),
 									currentIsSource = (status===BookSeriesVolumeDO.Enum.Status.Source),
 									currentIsSW = (status===BookSeriesVolumeDO.Enum.Status.StoreWait),
 									currentIsEarlier = _release.isBefore(earliestPreorder)
@@ -2916,7 +2927,7 @@
 									|| (earliestPreorderIsSource && !currentIsSource)
 									) {
 									earliestPreorder = _release;
-									earliestPreorderIsTPB = currentIsTPB;
+									earliestPreorderIsPhys = currentIsPhys;
 									earliestPreorderIsSource = currentIsSource;
 									earliestPreorderIsSW = currentIsSW;
 								}
@@ -2930,8 +2941,8 @@
 
 					if (earliestPreorder) {
 						var text = earliestPreorder.format("YYYY/MM/DD");
-						if (earliestPreorderIsTPB) {
-							text += " TPB";
+						if (earliestPreorderIsPhys) {
+							text += " Phys";
 						} else if (earliestPreorderIsSW) {
 							text += " SW";
 						} else if (earliestPreorderIsSource) {

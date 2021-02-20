@@ -32,9 +32,9 @@ if (file_exists('../../login.php')) {
 
 	<hr/>
 
-	<h3>TPB to digital</h3>
+	<h3>Physical to digital</h3>
 
-	<div id="tpbdigital-app"></div>
+	<div id="physdigital-app"></div>
 
 	<hr/>
 

@@ -5,7 +5,7 @@ function sleep(ms) {
 }
 
 
-window.VolumeTpbHandler = Object.extends({
+window.VolumePhysHandler = Object.extends({
 
 	volumeDO: null,
 	bookSeriesDO: null,
@@ -18,8 +18,10 @@ window.VolumeTpbHandler = Object.extends({
 		this.volumeDO = volumeDO;
 	},
 
-	isEligibleTpb: function() {
-		if (this.volumeDO.getStatus() !== BookSeriesVolumeDO.Enum.Status.TPB) {
+	isEligiblePhys: function() {
+		const status = this.volumeDO.getStatus();
+		
+		if (status !== BookSeriesVolumeDO.Enum.Status.Phys) {
 			return false;
 		}
 		if (!this.volumeDO.getAsin()) { return false; }
@@ -47,7 +49,7 @@ window.VolumeTpbHandler = Object.extends({
 		this.$li = $li;
 
 		this.writeActions();
-		if (this.volumeDO.isManualTpbKindleCheckOnly()) {
+		if (this.volumeDO.isManualPhysKindleCheckOnly()) {
 			this.setManualOnlyStatus();
 		}
 		return $li;
@@ -120,11 +122,11 @@ window.VolumeTpbHandler = Object.extends({
 	    	this.volumeDO.setReleaseDate(pd);
 	    }
 
-	    if (this.volumeDO.isManualTpbKindleCheckOnly()) {
+	    if (this.volumeDO.isManualPhysKindleCheckOnly()) {
 	    	try {
-	    		this.volumeDO.deleteManualTpbKindleCheckOnly();
+	    		this.volumeDO.deleteManualPhysKindleCheckOnly();
 	    	} catch (err) {
-	    		this.volumeDO.setManualTpbKindleCheckOnly(false);
+	    		this.volumeDO.setManualPhysKindleCheckOnly(false);
 	    	}
 	    	
 	    }
@@ -137,7 +139,7 @@ window.VolumeTpbHandler = Object.extends({
 	},
 
 	saveAsManualCheckOnly: function(val){
-		this.volumeDO.setManualTpbKindleCheckOnly(val);
+		this.volumeDO.setManualPhysKindleCheckOnly(val);
 
 	    this.volumeDO.save();
 
@@ -197,7 +199,7 @@ window.VolumeTpbHandler = Object.extends({
 
 		jQuery('<li class="divider"></li>').appendTo($dropdownActions);
 
-		if (this.volumeDO.isManualTpbKindleCheckOnly()) {
+		if (this.volumeDO.isManualPhysKindleCheckOnly()) {
 			this.generateDropdownActionItem('Unset manual only', "icon-ok-sign", () => {
 				this.setItemStatusSuccess();
 				this.saveAsManualCheckOnly(false);
@@ -263,7 +265,7 @@ window.VolumeTpbHandler = Object.extends({
 
 
 	setQueuedStatus: function(manual) {
-		if (!manual && this.volumeDO.isManualTpbKindleCheckOnly()) {
+		if (!manual && this.volumeDO.isManualPhysKindleCheckOnly()) {
 			this.setManualOnlyStatus();
 			return;
 		}
@@ -279,7 +281,7 @@ window.VolumeTpbHandler = Object.extends({
 	process: async function(manual) {
 		this.setResultIcon("icon-refresh");
 
-		if (!manual && this.volumeDO.isManualTpbKindleCheckOnly()) {
+		if (!manual && this.volumeDO.isManualPhysKindleCheckOnly()) {
 			this.setManualOnlyStatus();
 			return;
 		}
@@ -330,7 +332,7 @@ window.VolumeTpbHandler = Object.extends({
 
 
 },{
-	name: "VolumeTpbHandler"
+	name: "VolumePhysHandler"
 });
 
 
@@ -340,20 +342,20 @@ window.VolumeTpbHandler = Object.extends({
 
 
 
-window.VolumeTpbQueueHandler = Object.extends({
+window.VolumePhysQueueHandler = Object.extends({
 
-	volumeTpbList: null,
+	volumePhysList: null,
 	saveCallback: null,
 	$container: null,
 	queue: null,
 
-	__construct: function(volumeTpbList, saveCallback, $container){
-		this.volumeTpbList = volumeTpbList;
+	__construct: function(volumePhysList, saveCallback, $container){
+		this.volumePhysList = volumePhysList;
 		this.saveCallback = saveCallback;
 		this.$container = $container;
 
 		this.queue = async.queue(
-			async (vtpb, callback) => this.queueItemAction(vtpb, callback),
+			async (vphys, callback) => this.queueItemAction(vphys, callback),
 			3
 		);
 		this.queue.drain(() => this.onQueueComplete());
@@ -364,25 +366,25 @@ window.VolumeTpbQueueHandler = Object.extends({
 
 	getItemMatching: function(str) {
 		const rx = new RegExp(".*" + str.toLowerCase().replace(" ", ".*") + ".*", "g");
-		return this.volumeTpbList.find(x => {
+		return this.volumePhysList.find(x => {
 			return x.getName().toLowerCase().match(rx);
 		});
 	},
 
-	queueItemAction: async function(vtpb, callback) {
-		await vtpb.process();
+	queueItemAction: async function(vphys, callback) {
+		await vphys.process();
 		callback();
 	},
 
 	startQueue: function(){
-		this.volumeTpbList.forEach(vtpb => {
-			vtpb.setQueuedStatus();
+		this.volumePhysList.forEach(vphys => {
+			vphys.setQueuedStatus();
 		});
 		this.queue.remove(() => true);
 		if (this.queue.paused) {
 			this.queue.resume();
 		}
-		this.queue.push(this.volumeTpbList);
+		this.queue.push(this.volumePhysList);
 	},
 
 	togglePauseQueue:  function() {
@@ -432,12 +434,12 @@ window.VolumeTpbQueueHandler = Object.extends({
 
 		const $ul = this.$container.appendR('<ul class="volumes">');
 
-		this.volumeTpbList.forEach(vtpb => {
-			vtpb.render('<li>').appendTo($ul);
+		this.volumePhysList.forEach(vphys => {
+			vphys.render('<li>').appendTo($ul);
 		});
 	},
 }, {
-	name: "VolumeTpbQueueHandler"
+	name: "VolumePhysQueueHandler"
 })
 
 
@@ -494,7 +496,6 @@ window.BookSeriesIssueItem = Object.extends({
 		this.$actions = $interface.appendR('<span class="actions">');
 
 
-		// TODO: Support for multiple actions
 		const actions = this.getActions();
 		if (actions?.length > 1) {
 			const $dropdownActions = this.generateButtonWithDropdown(
@@ -883,7 +884,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 
 		window._ajaxBookseriesUri = "../../ajax_bookseries.php";
 		
-		const vtpbs = [];
+		const vphyss = [];
 		let issues = [];
 
 		const issuesOptions = this.getIssuesOptions();
@@ -904,27 +905,27 @@ window.bookSeriesAjaxInterface = Object.extends({
 			const volumes = bookSeriesDO.getVolumes();
 
 			volumes.forEach(volumeDO => {
-				const vtpb = new VolumeTpbHandler(volumeDO);
-				if (vtpb.isEligibleTpb()) {
-					vtpbs.push(vtpb);
+				const vphys = new VolumePhysHandler(volumeDO);
+				if (vphys.isEligiblePhys()) {
+					vphyss.push(vphys);
 				}
 			});
 		});
 		
 		{
-			vtpbs.sort((a,b)=>{
+			vphyss.sort((a,b)=>{
 				return a.getReleaseDateSortable().localeCompare(b.getReleaseDateSortable());
 			});
 			
-			const $tpbdigital = jQuery("#tpbdigital-app").empty();
+			const $physdigital = jQuery("#physdigital-app").empty();
 			
-			window._vtpbq = new VolumeTpbQueueHandler(vtpbs, () => {
+			window._vphysq = new VolumePhysQueueHandler(vphyss, () => {
 				this.jsonAjaxSave(async () => {
 					this.rerender();
 				}, () => {
 					alert("Error: couldn't save");
 				});
-			}, $tpbdigital);
+			}, $physdigital);
 		}
 		
 
@@ -1002,7 +1003,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 /*
 
 window.BookSeriesIssue = {
-	AwaitingDigitalVersion: 1, // First unowned volume is TPB
+	AwaitingDigitalVersion: 1, // First unowned volume is Phys
 	VolumeAvailable: 2, // First unowned volume is Available and series isn't Backlog or Dropped
 	PreorderAvailable: 3,
 	WaitingForLocal: 4, // Next unowned volume is Source
