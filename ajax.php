@@ -1,8 +1,5 @@
 <?php
 
-
-
-
 if (file_exists('login.php')) {
 	require_once("login.php");
 }
@@ -23,6 +20,14 @@ if (isset($_REQUEST["action"])) {
 	$jsonRequest = new JsonRequestDomain($domain);
 
 	switch ($_REQUEST["action"]) {
+
+		case 'lastmodified':
+			header("Content-Type: application/json");
+			print json_encode(array(
+				"lastmodified" => $jsonRequest->getLastModified()
+			));
+			die();
+			break;
 
 		case 'ajaxload':
 			header("Content-Type: application/json");

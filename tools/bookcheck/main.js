@@ -864,6 +864,12 @@ window.bookSeriesAjaxInterface = Object.extends({
 	_type: window.BookSeriesDO,
 	_ajaxendpoint: "../../ajax.php",
 	JsonAjaxInterface_afterDomReady: function(){},
+
+	_jsonAjaxAutostartCheckingRemoteModificationWithInterval: 5000,
+	JsonAjaxInterface_onDataUpdatedRemotely: function(){
+		window.location.reload();
+	},
+
 	rerender: function(){
 		this.JsonAjaxInterface_afterDataReady();
 	},

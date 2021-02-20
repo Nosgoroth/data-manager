@@ -49,6 +49,10 @@ class JsonRequest {
 		$this->filename = $filename;
 	}
 
+	public function getLastModified() {
+		return @filemtime($this->filename);
+	}
+
 	public function writeRaw($rawdata) {
 		file_put_contents($this->filename, $rawdata);
 	}

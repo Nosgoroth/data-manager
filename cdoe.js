@@ -244,6 +244,11 @@ window.CustomDataObjectEditor = Object.extends({
 
 	_ajaxendpoint: "./ajax.php",
 
+	_jsonAjaxAutostartCheckingRemoteModificationWithInterval: 5000,
+	JsonAjaxInterface_onDataUpdatedRemotely: function(){
+		window.location.reload();
+	},
+
 	CustomDataObjectEditor_afterDataReady: function(){},
 	CustomDataObjectEditor_onFilterUpdate: function(){},
 
