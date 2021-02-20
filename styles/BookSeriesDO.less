@@ -462,7 +462,10 @@
 					font-weight: bold;
 				}
 				.statusContainer {
+					font-size: 0.85em;
+					
 					.status {
+						opacity: 0.9em;
 						font-size: 0.75em;
 						background: #444;
 						display: inline-block;
@@ -471,7 +474,6 @@
 						border-radius: 8px;
 						line-height: 100%;
 					}
-					font-size: 0.85em;
 				}
 				.releaseDate {
 					position: absolute;
@@ -508,7 +510,7 @@
 			
 		}
 		&[data-status="5"] .content { //None
-			//opacity: 0.7;
+			opacity: 0.7;
 		}
 		&[data-status="6"] .content { //Source
 			background: #e2dbff;
@@ -516,7 +518,23 @@
 
 		&[data-parentstatus="5"] .content, //Consider
 		&[data-parentstatus="8"] .content { //Announced
-			//opacity: 0.7;
+			.statusContainer .status {
+				opacity: 0.7;
+			}			
+		}
+
+		&[data-status="7"] .content {
+			//Available
+			.statusContainer .status {
+				background: rgba(0, 0, 0, 0.3);
+			}
+		}
+
+		&[data-status="8"] .content {
+			//StoreWait
+			.statusContainer .status {
+				background: #195488;
+			}
 		}
 	}
 

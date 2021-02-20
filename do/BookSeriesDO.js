@@ -787,9 +787,7 @@
 				if (!rd) { return null; }
 				return moment(rd, "DD/MM/YYYY");
 			},
-			getReleaseDateShort: function(){
-
-				var d = this.getBestReleaseDateMoment();
+			makeDateShort: function(d) {
 				var isCurrentYear = (moment().year() === d.year());
 
 				if (isCurrentYear) {
@@ -803,11 +801,20 @@
 						;
 				}
 			},
+			makeDateLong: function(d) {
+				return d.format("D MMM YY");
+			},
+			getReleaseDateShort: function(){
+				var d = this.getBestReleaseDateMoment();
+				return this.makeDateShort(d);
+			},
 			getReleaseDateLong: function(){
 				return this.getBestReleaseDateMoment().format("D MMM YY");
 			},
 			getReleaseDateSortable: function(){
-				return this.getBestReleaseDateMoment().format("YYYY-MM-DD");
+				return this.makeDateLong(
+					this.getBestReleaseDateMoment()
+				);
 			},
 
 			getReadDateMoment: function() {
@@ -928,40 +935,38 @@
 			renderTile: function(options) {
 				options = populateDefaultOptions(options, {
 					container: '<li>',
-					releaseDateLong: false,
+					dateType: 'release', // release|purchase|read
+					dateLong: false,
 					weekday: false
+
 				});
 
-				var seriesname = this.parent.getName(),
-					colorder = this.getColorder(),
-					orderLabel = this.getCollectionOrderLabel()
-					status = this.getStatus(),
-					parentStatus = this.parent.getStatus(),
-					coverSize = 500,
-					coverUrl = this.getCoverUrl(coverSize),
-					notes = this.getNotes()
-					;
+				const status = this.getStatus();
+				const parentStatus = this.parent.getStatus();
+				const coverSize = 500;
+				const coverUrl = this.getCoverUrl(coverSize);
+				const notes = this.getNotes();
 
-				var $container = jQuery(options.container)
+				const $container = jQuery(options.container)
 					.addClass("bookSeriesVolumeTile")
 					.attr({
 						"data-status": status,
 						"data-parentstatus": parentStatus
 					})
 					;
-				var $content = $container.appendR('<div class="content">');
+				const $content = $container.appendR('<div class="content">');
 
-				var $cover = $content.appendR('<div class="cover">')
+				const $cover = $content.appendR('<div class="cover">')
 					.css('background-image', 'url('+coverUrl+')')
 					;
 
 				$dataContent = $content.appendR('<div class="dataContent">');
 
-				var title = this.getFullName();
+				const title = this.getFullName();
 
 				$dataContent.appendR('<p class="title">').text(title);
 
-				var $status = $dataContent.appendR('<p class="statusContainer">').hide().append('<span class="status">');
+				const $status = $dataContent.appendR('<p class="statusContainer">').hide().append('<span class="status">');
 				switch(status) {
 					case this.__static.Enum.Status.Preorder:
 						$status.show().find(".status").text("Preordered");
@@ -970,7 +975,7 @@
 						$status.show().find(".status").text("Available");
 						break;
 					case this.__static.Enum.Status.StoreWait:
-						$status.show().find(".status").text("Wait on store");
+						$status.show().find(".status").text("Wait for store");
 						break;
 					case this.__static.Enum.Status.TPB:
 						$status.show().find(".status").text("TPB");
@@ -985,10 +990,30 @@
 					$dataContent.appendR('<p class="notes">').text(notes);
 				}
 
-				var date = options.releaseDateLong ? this.getReleaseDateLong() : this.getReleaseDateShort();
-				if (options.weekday) {
-					date = this.getBestReleaseDateMoment().format("ddd") + ", " + date;
+				let dateMoment;
+				switch (options.dateType) {
+					case 'read':
+						dateMoment = this.getBestReadDateMoment();
+						break;
+					case 'purchase':
+						dateMoment = this.getBestPurchasedDateMoment();
+						break;
+					case 'release':
+					default:
+						dateMoment = this.getBestReleaseDateMoment();
+						break;
 				}
+
+				let date = options.dateLong
+					? this.makeDateLong(dateMoment)
+					: this.makeDateShort(dateMoment)
+					;
+
+				if (options.weekday) {
+					date = dateMoment.format("ddd") + ", " + date;
+				}
+
+
 				$dataContent.appendR('<span class="releaseDate">')
 					.text(date)
 					;
@@ -3237,7 +3262,8 @@
 				
 				volumesCOL.forEach(function(volumeDO){
 					$tiles.appendR(volumeDO.renderTile({
-						releaseDateLong: true
+						dateType: 'purchase',
+						dateLong: true,
 					}));
 				});
 
@@ -3289,7 +3315,8 @@
 				
 				volumesCOL.forEach(function(volumeDO){
 					$tiles.appendR(volumeDO.renderTile({
-						releaseDateLong: true
+						dateType: 'read',
+						dateLong: true,
 					}));
 				});
 
