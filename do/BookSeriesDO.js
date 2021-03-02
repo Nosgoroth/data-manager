@@ -434,6 +434,7 @@
 				const amazonLink = this.getAmazonLink();
 				const amazonJpLink = this.getAmazonJpLink();
 				const koboLink = this.getKoboLink();
+				const jncLink = this.parent.getJNovelClubSearchLink();
 
 				let values = [];
 
@@ -449,6 +450,11 @@
 						{ url: koboLink, label: "View on Kobo", icon: 'icon-book', },
 						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', },
 					];
+				}
+				if (store === BookSeriesDO.Enum.Store.JNC) {
+					values.unshift(
+						{ url: jncLink, label: "Search on JNC", icon: 'icon-search', },
+					);
 				}
 
 				return values.filter(x => !!x.url);
@@ -1596,6 +1602,15 @@
 
 			getStoreSearchActions: function(volumeNumber) {
 				const volume = this.getVolumeWithOrder(volumeNumber);
+
+				const jncLink =
+					(
+						this.getStore() === BookSeriesDO.Enum.Store.JNC
+					)
+					? this.getJNovelClubSearchLink()
+					: null
+					;
+
 				const koboLink = 
 					(
 						(!volume || !volume?.getKoboId())
@@ -1627,6 +1642,7 @@
 					;
 				
 				const values = [
+					{ url: jncLink, label: "Search on JNC", icon: 'icon-shopping-cart', },
 					{ url: amazonLink, label: "Search on Amazon", icon: 'icon-shopping-cart', },
 					{ url: amazonPhysLink, label: "Search on Amazon (Phys)", icon: 'icon-shopping-cart', },
 					{ url: koboLink, label: "Search on Kobo", icon: 'icon-shopping-cart', },
@@ -1647,6 +1663,12 @@
 					{ url: amazonPhysLink, label: "Search on Amazon JP (Phys)", icon: 'icon-shopping-cart', },
 					{ url: googleAmazonLink, label: "Search on Amazon JP w/Google", icon: 'icon-search', },
 				].filter(x => !!x.url);
+			},
+
+			getJNovelClubSearchLink: function(){
+				const kss = this.getKindleSearchString();
+				if (!kss) { return null; }
+				return `https://beta.j-novel.club/titles?search=${ encodeURIComponent(kss) }`;
 			},
 
 			getKindleSearchLink: function(volumeNumber, asPhysicalBook){
