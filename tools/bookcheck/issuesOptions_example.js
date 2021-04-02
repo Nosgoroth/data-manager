@@ -7,4 +7,7 @@ bookSeriesAjaxInterface.setIssuesOptions({
     ignoreLocalIssuesOnBacklog: true,
     // ignoreSourceIssuesOnBacklog: true,
     ignorePreorderAvailableForAnnounced: true,
+    showSourceWaitingWhenNotAllVolumesOwned: false,
+    localOverdueOffset: 60*60*24*30,
+    sourceOverdueOffset: 60*60*24*30,
 });

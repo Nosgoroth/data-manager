@@ -266,13 +266,14 @@
 		VolumeAvailable: 2, // First unowned volume is Available and series isn't Backlog or Dropped
 		PreorderAvailable: 3,
 		WaitingForLocal: 4, // Next unowned volume is Source
-		WaitingForSource: 5, // All volumes owned and series isn 't Ended
+		WaitingForSource: 5, // All volumes owned and series isn't Ended
 		AwaitingStoreAvailability: 6,
 		LocalVolumeOverdue: 7, // Some heuristics here
 		SourceVolumeOverdue: 8, // Some heuristics here
 		MissingInformation: 9,
 		NoLocalStoreReferences: 10,
 		NoSourceStoreReferences: 11,
+		CancelledAtSource: 12,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -288,6 +289,7 @@
 			case BookSeriesIssue.MissingInformation: return 'Missing information';
 			case BookSeriesIssue.NoLocalStoreReferences: return 'No local store';
 			case BookSeriesIssue.NoSourceStoreReferences: return 'No source store';
+			case BookSeriesIssue.CancelledAtSource: return 'Assumed cancelled at source';
 			default: return 'Unknown issue';
 		}
 	}
@@ -1584,6 +1586,7 @@
 			koboSeriesId: "string",
 			ignoreIssues: "boolean",
 			hasNoSource: "boolean",
+			cancelledAtSource: "boolean",
 		},
 
 		extraPrototype: {
@@ -1668,7 +1671,7 @@
 			getJNovelClubSearchLink: function(){
 				const kss = this.getKindleSearchString();
 				if (!kss) { return null; }
-				return `https://beta.j-novel.club/titles?search=${ encodeURIComponent(kss) }`;
+				return `https://j-novel.club/series?search=${ encodeURIComponent(kss) }`;
 			},
 
 			getKindleSearchLink: function(volumeNumber, asPhysicalBook){
@@ -2008,7 +2011,7 @@
 
 				const graphData = this.getPublicationGraphData();
 
-				if (this.isLocalVolumeOverdue(graphData, 60*60*24*30)) {
+				if (this.isLocalVolumeOverdue(graphData, options.localOverdueOffset)) {
 					return [BookSeriesIssue.LocalVolumeOverdue];
 				}
 
@@ -2034,18 +2037,26 @@
 					];
 				}
 
+				if (this.isCancelledAtSource()) {
+					return [
+						BookSeriesIssue.CancelledAtSource,
+						null
+					];
+				}
+
 				const graphData = this.getPublicationGraphData();
 				const hasNoSource = this.isHasNoSource();
 
-				if (this.isSourceVolumeOverdue(graphData) && !hasNoSource) {
+				if (this.isSourceVolumeOverdue(graphData, options.sourceOverdueOffset) && !hasNoSource) {
 					return [BookSeriesIssue.SourceVolumeOverdue];
 				}
 
 				const firstUnowned = this.getFirstUnownedVolume();
 				const isFinishedPublication = this.isFinishedPublication();
 				const seriesStatus = this.getStatus();
+				const showSourceWaitingWhenNotAllVolumesOwned = !!options.showSourceWaitingWhenNotAllVolumesOwned;
 
-				if (!firstUnowned && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended) && !hasNoSource) {
+				if ((!firstUnowned || showSourceWaitingWhenNotAllVolumesOwned) && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended) && !hasNoSource) {
 					return [BookSeriesIssue.WaitingForSource];
 				}
 
@@ -2306,6 +2317,7 @@
 			},
 
 			isLocalVolumeOverdue: function(cachedPubGraphData, offsetSeconds){
+				offsetSeconds = offsetSeconds ?? 0;
 				const data = cachedPubGraphData ? cachedPubGraphData : this.getPublicationGraphData();
 				return data.nexten
 					? moment().add(offsetSeconds, 'seconds').isSameOrAfter(data.nexten, 'days')
@@ -2313,9 +2325,13 @@
 					;
 			},
 
-			isSourceVolumeOverdue: function(cachedPubGraphData){
+			isSourceVolumeOverdue: function(cachedPubGraphData, offsetSeconds){
+				offsetSeconds = offsetSeconds ?? 0;
 				const data = cachedPubGraphData ? cachedPubGraphData : this.getPublicationGraphData();
-				return data.nextjp ? moment().isSameOrAfter(data.nextjp, 'days') : null;
+				return data.nextjp
+					? moment().add(offsetSeconds, 'seconds').isSameOrAfter(data.nextjp, 'days')
+					: null
+					;
 			},
 
 			canScrapeForPubDates: function(){
@@ -2486,6 +2502,9 @@
 
 				var jp = [], en = [], jpdate = [], endate = [];
 				var volumesCOL = this.getVolumes();
+
+				volumesCOL = volumesCOL.filter(x => !x.isTreatAsNotSequential());
+
 				volumesCOL.sortByProperty("colorder");
 
 				var leadtimes = [];
@@ -3766,7 +3785,7 @@
 					"lastcheck", "lastupdate",
 					"publishedVolumes", "finishedPublication", "volumes", "forcednotes", "morenotes",
 					"link", "kindleSearchString", "kindleSearchStringSource", "ignoreIssues",
-					"koboSeriesId", "hasNoSource",
+					"koboSeriesId", "hasNoSource", "cancelledAtSource"
 				]
 			},
 			

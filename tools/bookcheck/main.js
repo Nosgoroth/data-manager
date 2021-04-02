@@ -176,6 +176,10 @@ window.VolumePhysHandler = Object.extends({
 				this.save(BookSeriesVolumeDO.Enum.Status.Available);
 			}).appendTo($dropdownActions);
 
+			this.generateDropdownActionItem('Set as Store Wait', null, () => {
+				this.save(BookSeriesVolumeDO.Enum.Status.StoreWait);
+			}).appendTo($dropdownActions);
+
 			this.generateDropdownActionItem('Set as Backlog', null, () => {
 				this.save(BookSeriesVolumeDO.Enum.Status.Backlog);
 			}).appendTo($dropdownActions);
@@ -678,6 +682,7 @@ window.BookSeriesIssueItem = Object.extends({
 				}
 
 			case BookSeriesIssue.SourceVolumeOverdue:
+			case BookSeriesIssue.CancelledAtSource:
 				return `Vol. ${this.lastVolume.getColorder() + 1} overdue ${this.bookSeriesDO.getSourceOverdueText()}`;
 
 			default:
@@ -705,6 +710,7 @@ window.BookSeriesIssueItem = Object.extends({
 				break;
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
+			case BookSeriesIssue.CancelledAtSource:
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.nextVolumeColorder);
 				break;
 			case BookSeriesIssue.NoSourceStoreReferences:
@@ -712,6 +718,7 @@ window.BookSeriesIssueItem = Object.extends({
 				break;
 			case BookSeriesIssue.AwaitingStoreAvailability:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
+				actions = actions.concat(this.firstUnownedVolume?.getStoreLinkActions());
 				break;
 			case BookSeriesIssue.MissingInformation:
 				actions = [{
@@ -736,6 +743,35 @@ window.BookSeriesIssueItem = Object.extends({
 			lastActionsLength = actions.length;
 		}
 
+
+		if (this.issue === BookSeriesIssue.SourceVolumeOverdue) {
+			actions.push({
+				label: "Set cancelled at source",
+				icon: "icon-warning-sign",
+				callback: () => {
+					try {
+						this.bookSeriesDO.setCancelledAtSource(true);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+				}
+			});
+		}
+		if (this.issue === BookSeriesIssue.CancelledAtSource) {
+			actions.push({
+				label: "Unset cancelled",
+				icon: "icon-warning-sign",
+				callback: () => {
+					try {
+						this.bookSeriesDO.setCancelledAtSource(false);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+				}
+			});
+		}
 
 		if (this.bookSeriesDO.canResolveIssueWithAsin(this.issue)) {
 			actions.push({
@@ -773,7 +809,7 @@ window.BookSeriesIssueItem = Object.extends({
 
 		if (this.bookSeriesDO.canResolveIssueWithVolumeStatus(this.issue)) {
 			actions.push({
-				label: "Set status",
+				label: "Set volume status",
 				icon: "icon-chevron-right",
 				callback: () => {
 					try {
@@ -792,6 +828,26 @@ window.BookSeriesIssueItem = Object.extends({
 				}
 			});
 		}
+
+		actions.push({
+				label: "Set series status",
+				icon: "icon-chevron-right",
+				callback: () => {
+					try {
+						const legend = Object.keys(BookSeriesDO.Enum.Status)
+							.map(x => `${x} = ${BookSeriesDO.Enum.Status[x]}`)
+							.join(", ")
+							;
+						const status = prompt("Status to resolve:\n"+legend);
+						if (!status) { return; }
+						this.bookSeriesDO.setStatus(status);
+						this.save();
+					} catch(err) {
+						alert(err.message);
+					}
+					
+				}
+			});
 
 		if (this.bookSeriesDO.canResolveIssueWithReleaseDate(this.issue)) {
 			actions.push({
@@ -946,6 +1002,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 				BookSeriesIssue.LocalVolumeOverdue,
 				//BookSeriesIssue.WaitingForSource,
 				BookSeriesIssue.SourceVolumeOverdue,
+				BookSeriesIssue.CancelledAtSource,
 			]
 
 			issues = issues.sort((a, b) => {
@@ -983,6 +1040,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 				BookSeriesIssue.NoSourceStoreReferences,
 				BookSeriesIssue.WaitingForSource,
 				BookSeriesIssue.SourceVolumeOverdue,
+				BookSeriesIssue.CancelledAtSource,
 			].filter(x => existingIssueTypesUnsorted.indexOf(x) !== -1);
 			
 			for (const issueType of existingIssueTypes) {
