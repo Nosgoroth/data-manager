@@ -1681,9 +1681,11 @@
 					kss += " "+volumeNumber;
 				}
 				if (asPhysicalBook) {
-					return "https://smile.amazon.com/s?i=stripbooks-intl-ship&s=date-desc-rank&field-keywords=" + encodeURIComponent(kss);
+					//return "https://smile.amazon.com/s?i=stripbooks-intl-ship&s=date-desc-rank&field-keywords=" + encodeURIComponent(kss);
+					return "https://smile.amazon.com/s?k="+encodeURIComponent(kss)+"&i=stripbooks";
 				} else {
-					return "https://smile.amazon.com/gp/search/?search-alias=digital-text&unfiltered=1&field-language=English&sort=daterank&field-keywords="+encodeURIComponent(kss);
+					// return "https://smile.amazon.com/gp/search/?search-alias=digital-text&unfiltered=1&field-language=English&sort=daterank&field-keywords="+encodeURIComponent(kss);
+					return "https://smile.amazon.com/s?k="+encodeURIComponent(kss)+"&i=digital-text";
 				}
 			},
 			getKindleSearchLinkSource: function(volumeNumber, asPhysicalBook){
@@ -1692,11 +1694,10 @@
 				if (volumeNumber) {
 					kss += " "+volumeNumber;
 				}
-				// return "https://www.amazon.co.jp/gp/search/?search-alias=digital-text&sort=date-desc-rank&keywords="+encodeURIComponent(kss);
 				if (asPhysicalBook) {
-					return "https://www.amazon.co.jp/s?i=stripbooks&ref=nb_sb_noss&k="+encodeURIComponent(kss);
+					return "https://www.amazon.co.jp/s?k="+encodeURIComponent(kss)+"&i=stripbooks";
 				} else {
-					return "https://www.amazon.co.jp/gp/search/?search-alias=digital-text&keywords="+encodeURIComponent(kss);
+					return "https://www.amazon.co.jp/s?k="+encodeURIComponent(kss)+"&i=digital-text";
 				}
 			},
 			getGoogleKindleSearchLink: function(volumeNumber){
