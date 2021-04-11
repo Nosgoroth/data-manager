@@ -1142,6 +1142,9 @@
 				var isKoboSeries = (this.parent.getStore() === BookSeriesDO.Enum.Store.Kobo);
 				var isPhysSeries = (this.parent.getStore() === BookSeriesDO.Enum.Store.Phys);
 
+				const searchActions = this.parent.getStoreSearchActions(this.getColorder());
+				const searchActionsSource = this.parent.getSourceStoreSearchActions(this.getColorder());
+
 				if (isbn && isPhysSeries) {
 					isbn = (""+isbn).replace(/[^\d]+/gi, "");
 					addOption().html('<i class="icon-shopping-cart"></i> Book Depository store page').attr({
@@ -1169,13 +1172,13 @@
 				}
 
 
-				if (koboslinkvol && !koboId) {
+				/*if (koboslinkvol && !koboId) {
 					addOption().html('<i class="icon-shopping-cart"></i> Search volume on Kobo').attr({
 						href: koboslinkvol,
 						target: "_blank"
 					});
 					anyAsinLinkShown = true;
-				}
+				}*/
 
 				if (mainAsin) {
 					addOption().html('<i class="icon-shopping-cart"></i> Amazon store page').attr({
@@ -1183,12 +1186,12 @@
 						target: "_blank"
 					});
 					anyAsinLinkShown = true;
-				} else if (slinkvol) {
+				/*} else if (slinkvol) {
 					addOption().html('<i class="icon-shopping-cart"></i> Search volume on Amazon').attr({
 						href: slinkvol,
 						target: "_blank"
 					});
-					anyAsinLinkShown = true;
+					anyAsinLinkShown = true;*/
 				}
 
 				if (sourceAsin) {
@@ -1197,12 +1200,12 @@
 						target: "_blank"
 					});
 					anyAsinLinkShown = true;
-				} else if (slinksrcvol) {
+				/*} else if (slinksrcvol) {
 					addOption().html('<i class="icon-shopping-cart"></i> Search volume on Amazon JP').attr({
 						href: slinksrcvol,
 						target: "_blank"
 					});
-					anyAsinLinkShown = true;
+					anyAsinLinkShown = true;*/
 				}
 
 				if (isKindleSeries &&
@@ -1234,6 +1237,34 @@
 
 
 				if (anyAsinLinkShown) {
+					addSeparator();
+				}
+
+
+
+				if (searchActions && searchActions.length) {
+					for (let searchAction of searchActions) {
+						addOption()
+							.html(`<i class="${searchAction.icon}"></i> ${searchAction.label}`)
+							.attr({
+								href: searchAction.url,
+								target: "_blank"
+							})
+							;
+					}
+					addSeparator();
+				}
+
+				if (searchActionsSource && searchActionsSource.length) {
+					for (let searchAction of searchActionsSource) {
+						addOption()
+							.html(`<i class="${searchAction.icon}"></i> ${searchAction.label}`)
+							.attr({
+								href: searchAction.url,
+								target: "_blank"
+							})
+							;
+					}
 					addSeparator();
 				}
 
