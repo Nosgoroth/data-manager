@@ -1605,6 +1605,7 @@
 
 			getStoreSearchActions: function(volumeNumber) {
 				const volume = this.getVolumeWithOrder(volumeNumber);
+				const publisher = this.getPublisher();
 
 				const jncLink =
 					(
@@ -1638,6 +1639,20 @@
 					: null
 					;
 
+				const prhLink =
+					(
+						(!volume || !volume.getReleaseDate())
+						&&
+						(
+							publisher === this.__static.Enum.Publisher["Seven Seas"]
+							|| publisher === this.__static.Enum.Publisher.Kodansha
+						)
+					)
+					? this.getPenguinRandomHouseSearchLink(volumeNumber)
+					: null
+					;
+
+
 				const googleAmazonLink =
 					(!volume || !volume?.getAsin())
 					? this.getGoogleKindleSearchLink(volumeNumber)
@@ -1650,6 +1665,7 @@
 					{ url: amazonPhysLink, label: "Search on Amazon (Phys)", icon: 'icon-shopping-cart', },
 					{ url: koboLink, label: "Search on Kobo", icon: 'icon-shopping-cart', },
 					{ url: rightstufLink, label: "Search on Rightstuf", icon: 'icon-shopping-cart', },
+					{ url: prhLink, label: "Search on Penguin", icon: 'icon-shopping-cart', },
 					{ url: googleAmazonLink, label: "Search on Amazon w/Google", icon: 'icon-search', },
 				];
 
@@ -1657,9 +1673,23 @@
 			},
 
 			getSourceStoreSearchActions: function(volumeNumber) {
-				const amazonLink = this.getKindleSearchLinkSource(volumeNumber, false); 
-				const amazonPhysLink = this.getKindleSearchLinkSource(volumeNumber, true); 
-				const googleAmazonLink = this.getGoogleKindleSearchLinkSource(volumeNumber);
+				const volume = this.getVolumeWithOrder(volumeNumber);
+
+				const amazonLink =
+					(!volume || !volume.getReleaseDateSource())
+					? this.getKindleSearchLinkSource(volumeNumber, false)
+					: null
+					;
+				const amazonPhysLink =
+					(!volume || !volume.getReleaseDateSource())
+					? this.getKindleSearchLinkSource(volumeNumber, true)
+					: null
+					;
+				const googleAmazonLink = 
+					(!volume || !volume.getReleaseDateSource())
+					? this.getGoogleKindleSearchLinkSource(volumeNumber)
+					: null
+					;
 
 				return [
 					{ url: amazonLink, label: "Search on Amazon JP", icon: 'icon-shopping-cart', },
@@ -1749,6 +1779,23 @@
 						break;
 				}
 				return `https://www.rightstufanime.com/${typeInUrl}?keywords=${ encodeURIComponent(kss) }`;
+			},
+			getPenguinRandomHouseSearchLink: function(volumeNumber, imprint) {
+				var kss = this.getKindleSearchString();
+				if (!kss) { return null; }
+				if (volumeNumber) {
+					kss += " "+volumeNumber;
+				}
+				let url = `https://www.penguinrandomhouse.ca/search?q=${ encodeURIComponent(kss) }`;
+				if (!imprint && this.getPublisher() === this.__static.Enum.Publisher["Seven Seas"]) {
+					if (this.getType() === this.__static.Enum.Type.Novel) {
+						imprint = "Airship";
+					}
+				}
+				if (imprint) {
+					url += `&imprint=${ encodeURIComponent(imprint) }`
+				}
+				return url;
 			},
 			getVolumes: function(){
 				var volumesraw = this.get("volumes");
