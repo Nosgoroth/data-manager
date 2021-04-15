@@ -2057,11 +2057,10 @@
 				const firstUnownedStatus = firstUnowned?.getStatus() ?? null;
 				const seriesStatus = this.getStatus();
 
-				const noLocalStoreVolume = this.isAnyVolumeNoLocalStoreReferences();
-				if (noLocalStoreVolume) {
+				if (firstUnowned?.isNoLocalStoreReferences()) {
 					return [
 						BookSeriesIssue.NoLocalStoreReferences,
-						noLocalStoreVolume
+						firstUnowned
 					];
 				}
 
@@ -2088,6 +2087,16 @@
 					}
 				}
 
+
+				const noLocalStoreVolume = this.isAnyVolumeNoLocalStoreReferences();
+				if (noLocalStoreVolume) {
+					return [
+						BookSeriesIssue.NoLocalStoreReferences,
+						noLocalStoreVolume
+					];
+				}
+
+
 				const graphData = this.getPublicationGraphData();
 
 				if (this.isLocalVolumeOverdue(graphData, options.localOverdueOffset)) {
@@ -2097,6 +2106,7 @@
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Source) {
 					return [BookSeriesIssue.WaitingForLocal];
 				}
+				
 
 				return null;
 			},
