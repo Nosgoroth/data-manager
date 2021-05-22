@@ -20,11 +20,17 @@ window.VolumePhysHandler = Object.extends({
 
 	isEligiblePhys: function() {
 		const status = this.volumeDO.getStatus();
+		const store = this.volumeDO.parent.getStore();
 		
 		if (status !== BookSeriesVolumeDO.Enum.Status.Phys) {
 			return false;
 		}
-		if (!this.volumeDO.getAsin()) { return false; }
+		if (store === BookSeriesDO.Enum.Store.Phys) {
+			return false;
+		}
+		if (!this.volumeDO.getAsin()) {
+			return false;
+		}
 		return true;
 	},
 
@@ -593,6 +599,10 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
 			case BookSeriesIssue.NoLocalStoreReferences:
+				const unix = this.volumeWithIssueDO?.getReleaseDateMoment()?.unix();
+				if (unix) {
+					return unix;
+				}
 				return this.firstUnownedVolume?.getReleaseDateMoment()?.unix() ?? Infinity;
 
 			case BookSeriesIssue.WaitingForLocal:
@@ -714,6 +724,7 @@ window.BookSeriesIssueItem = Object.extends({
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.nextVolumeColorder);
 				break;
 			case BookSeriesIssue.NoSourceStoreReferences:
+				console.log(this.volumeWithIssueDO.getColorder());
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.volumeWithIssueDO.getColorder());
 				break;
 			case BookSeriesIssue.AwaitingStoreAvailability:

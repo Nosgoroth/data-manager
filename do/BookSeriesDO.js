@@ -1,5 +1,20 @@
 (function(){
 
+
+	/*
+
+	To grab a whole series from Amazon from developer console:
+
+		// Digital
+		[...document.querySelectorAll("a.itemBookTitle")].map(x => x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")).join("\n ")
+
+		// Physical (Amazon US)
+		[...document.querySelectorAll(".a-link-normal")].filter(el => (el.text && el.text.includes("Paperback"))).map(x => x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")).join("\n ")
+
+	*/
+
+
+
 	var isIos = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
 
 	// https://tc39.github.io/ecma262/#sec-array.prototype.includes
@@ -312,9 +327,10 @@
 		{ name: "Kadokawa", link: null },
 		{ name: "Seven Seas", link: "https://twitter.com/gomanga" },
 		{ name: "Other", link: null },
-		{ name: "Sol Press", link: "https://solpress.co/light-novels" },
+		{ name: "Sol Press", link: "https://twitter.com/SolPressUSA" },
 		{ name: "Vertical", link: "https://twitter.com/vertical_staff" },
 		{ name: "Tentai", link: "https://twitter.com/tentaibooks" },
+		{ name: "CIW", link: "https://twitter.com/crossinfworld" },
 	]);
 
 
@@ -349,6 +365,7 @@
 			mangaCalendarEnabled: "boolean",
 			manualPhysKindleCheckOnly: "boolean",
 			treatAsNotSequential: "boolean",
+			dontCheckForDelays: "boolean",
 		},
 		extraPrototype: {
 
@@ -390,7 +407,14 @@
 					if (rawdata[3]) {
 						this._rawdata.sourceAsin = rawdata[3].trim();
 					}
-					this._rawdata.notes = rawdata[4] ? rawdata[4].trim() : window.undefined;
+					const otherAsin = rawdata[4] ? rawdata[4].trim() : window.undefined;
+					if (otherAsin) {
+						if (this._rawdata.asin) {
+							this._rawdata.sourceAsin = otherAsin;
+						} else {
+							this._rawdata.asin = otherAsin;
+						}
+					}
 					this._rawdata.orderLabel = rawdata[5] ? rawdata[5].trim() : window.undefined;
 				}
 
@@ -1371,6 +1395,11 @@
 						this.setImageAsin("");
 						this.save();
 					}.bind(this));
+				} else if (!imageAsin && sourceAsin) {
+					addOption().html('<i class="icon-resize-vertical"></i> Force source image').click(function(){
+						this.setImageAsin(sourceAsin);
+						this.save();
+					}.bind(this));
 				}
 
 				addOption().html('<i class="icon-eye-close"></i> Hide').click(function(){
@@ -1618,6 +1647,8 @@
 			ignoreIssues: "boolean",
 			hasNoSource: "boolean",
 			cancelledAtSource: "boolean",
+			dontCheckForDelays: "boolean",
+			highlight: "boolean",
 		},
 
 		extraPrototype: {
@@ -1706,21 +1737,24 @@
 			getSourceStoreSearchActions: function(volumeNumber) {
 				const volume = this.getVolumeWithOrder(volumeNumber);
 
+
 				const amazonLink =
-					(!volume || !volume.getReleaseDateSource())
+					(!volume || !volume.getSourceAsin())
 					? this.getKindleSearchLinkSource(volumeNumber, false)
 					: null
 					;
 				const amazonPhysLink =
-					(!volume || !volume.getReleaseDateSource())
+					(!volume || !volume.getSourceAsin())
 					? this.getKindleSearchLinkSource(volumeNumber, true)
 					: null
 					;
 				const googleAmazonLink = 
-					(!volume || !volume.getReleaseDateSource())
+					(!volume || !volume.getSourceAsin())
 					? this.getGoogleKindleSearchLinkSource(volumeNumber)
 					: null
 					;
+
+				//console.log(volumeNumber, amazonLink);
 
 				return [
 					{ url: amazonLink, label: "Search on Amazon JP", icon: 'icon-shopping-cart', },
@@ -2056,6 +2090,7 @@
 				const firstUnowned = this.getFirstUnownedVolume();
 				const firstUnownedStatus = firstUnowned?.getStatus() ?? null;
 				const seriesStatus = this.getStatus();
+				const store = this.getStore();
 
 				if (firstUnowned?.isNoLocalStoreReferences()) {
 					return [
@@ -2064,7 +2099,7 @@
 					];
 				}
 
-				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Phys) {
+				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Phys && store !== BookSeriesDO.Enum.Store.Phys) {
 					return [BookSeriesIssue.AwaitingDigitalVersion, firstUnowned];
 				}
 
@@ -2697,6 +2732,10 @@
 				} catch (e) {
 					//pass
 					console.warn(e);
+				}
+
+				if (this.isFinishedPublication()) {
+					nextjp = null;
 				}
 
 				// console.log("JP:", jpdate.map(x=>x.format("DD/MMM/YYYY")), 'NEXT', nextjp ? nextjp.format("DD/MMM/YYYY") : null);
@@ -3874,7 +3913,7 @@
 					"lastcheck", "lastupdate",
 					"publishedVolumes", "finishedPublication", "volumes", "forcednotes", "morenotes",
 					"link", "kindleSearchString", "kindleSearchStringSource", "ignoreIssues",
-					"koboSeriesId", "hasNoSource", "cancelledAtSource"
+					"koboSeriesId", "hasNoSource", "cancelledAtSource", "dontCheckForDelays", "highlight",
 				]
 			},
 			

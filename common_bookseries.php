@@ -124,6 +124,17 @@ class AmazonComAsinScraper {
 		return null;
 	}
 
+	function extractPubDateDDMMYY() {
+		$date = $this->extractPubDate();
+		if (!$date) { return null; }
+		try {
+			$dp = date_parse_from_format("M d, Y", $date);
+			return $dp["day"]."/".$dp["month"]."/".$dp["year"];
+		} catch (Exception $e) {
+			return null;
+		}
+	}
+
 }
 
 
@@ -193,5 +204,80 @@ class KoboScraper {
 
 		return $data;
 	}
+
+	function extractPubDateDDMMYY() {
+		$data = $this->extractAllData();
+		if (!$data) { return null; }
+		$date = isset($data["date"]) ? $data["date"] : null;
+		if (!$date) { return null; }
+		try {
+			$dp = date_parse_from_format("M d, Y", $date);
+			return $dp["day"]."/".$dp["month"]."/".$dp["year"];
+		} catch (Exception $e) {
+			return null;
+		}
+	}
+}
+
+
+
+function bookVolumeCheckDelay($volume) {
+
+	$res = [
+		"ok" => false,
+		"error" => null,
+		"isNewDate" => false,
+		"isDelay" => false,
+		"updatedDate" => null,
+	];
+
+	try {
+		$date = isset($volume["releaseDate"]) ? $volume["releaseDate"] : null;
+		$date = bookVolumeNormalizeDDMMYY($date);
+		$dp = date_parse_from_format("d/m/Y", $date);
+		$unix = mktime(0,0,0,$dp["month"],$dp["day"],$dp["year"]);
+
+		
+		$updatedDate = null;
+		if ($volume["asin"] && false) {
+			$scraper = new AmazonComAsinScraper($volume["asin"]);
+			$scraper->read();
+			$updatedDate = $scraper->extractPubDateDDMMYY();
+		} else if (isset($volume["koboId"]) && $volume["koboId"]) {
+			$scraper = new KoboScraper($volume["koboId"]);
+			$scraper->read();
+			$updatedDate = $scraper->extractPubDateDDMMYY();
+		} else {
+			$res["error"] = "No valid store";
+			return $res;
+		}
+		if (!$updatedDate) {
+			$res["error"] = "Couldn't retrieve date";
+			return $res;
+		}
+
+		$res["ok"] = true;
+		if (!$date) {
+			$res["isNewDate"] = true;
+			$res["updatedDate"] = $updatedDate;
+		} else if ($updatedDate !== $date) {
+			$res["updatedDate"] = $updatedDate;
+			$dp = date_parse_from_format("d/m/Y", $updatedDate);
+			$updatedUnix = mktime(0,0,0,$dp["month"],$dp["day"],$dp["year"]);
+			$res["isDelay"] = !($unix > $updatedUnix);
+		}
+
+		return $res;
+	} catch (Exception $th) {
+		$res["error"] = $th;
+		return $res;
+	}
+}
+
+
+function bookVolumeNormalizeDDMMYY($date) {
+	if (!$date) { return null; }
+	$dp = date_parse_from_format("d/m/Y", $date);
+	return $dp["day"]."/".$dp["month"]."/".$dp["year"];
 }
 
