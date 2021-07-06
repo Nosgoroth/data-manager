@@ -12,16 +12,20 @@ class AmazonJpAsinScraper {
 	}
 
 	function read($debug = false) {
+		//return;
 		$this->raw = file_get_contents("https://www.amazon.co.jp/gp/product/".$this->ASIN.'?language=ja_JP');
 		if (isGzipHeaderSet(transformIntoHeaderMap($http_response_header))) {
 			$this->raw = gzdecode($this->raw);
 		}
+		$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
 	}
 
 	function extractPubDate(){
 		mb_internal_encoding('UTF-8');
-		// $this->raw = '<span class="a-list-item"> <span class="a-text-bold">出版社 : </span> <span>双葉社 (2015/4/16)</span> </span>';
+		//$this->raw = '<span class="a-text-bold">出版社 &rlm; : &lrm;</span> <span> KADOKAWA (2016/1/25)</span>';
+		//$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
 		preg_match("/出版社[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.*[\s]\(([\d\/]+)\)\</s", $this->raw, $matches);
+		//var_dump($matches); die();
 		if (count($matches) > 1) {
 			return $matches[1];
 		} else {
@@ -92,6 +96,7 @@ class AmazonComAsinScraper {
 			print $this->raw;
 			die();
 		}
+		$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
 	}
 
 	function extractKindleAsin() {
