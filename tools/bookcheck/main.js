@@ -612,6 +612,7 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.NoSourceStoreReferences:
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
+			case BookSeriesIssue.CancelledAtSource:
 				return this.bookSeriesDO.getNextSourceVolumeExpectedDateUncorrected()?.unix() ?? Infinity;
 
 			default:

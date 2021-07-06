@@ -45,6 +45,7 @@
 
 			.colorder {
 				position: absolute;
+				z-index: 1;
 				top: 2px;
 				left: 2px;
 				color: #333;
@@ -57,12 +58,25 @@
 				padding: 1px 2px 2px 1px;
 			}
 
-			.cover {
+			.coverframe {
 				display: block;
 				height: 100%;
-				background: url() center center / cover no-repeat transparent;
+				
 				border: 2px solid transparent;
 				box-sizing: border-box;
+
+				.cover {
+					display: block;
+					height: 100%;
+					background: url() center center / cover no-repeat transparent;
+
+					&.blurred {
+						filter: blur(2px);
+						overflow: hidden;
+					}
+				}
+
+				
 			}
 		}
 		.notes {
@@ -106,46 +120,46 @@
 			@color: #ff982e;
 			border-color: @color;
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 		&[data-status="3"] .coverContainer { //Preorder
 			@color: #38d481;
 			border-color: #a0ff88;
 			filter: blur(5);
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 		&[data-status="4"] .coverContainer { //Phys
 			@color: #d843aa;
 			border-color: @color;
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 		&[data-status="5"] .coverContainer { //None
 			//opacity: 0.7;
 			@color: #AAAAAA;
 			border-color: @color;
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 		&[data-status="6"] .coverContainer { //Source
 			@color: #6143DB;
 			border-color: @color;
 			filter: blur(5);
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 		&[data-status="7"] .coverContainer { //Available
 			@color: #91d09a;
 			border-color: @color;
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 		&[data-status="8"] .coverContainer { //StoreWait
 			@color: #63dae0;
 			border-color: @color;
 			.colorder { background: @color; color: white; }
-			.cover { border-color: @color; }
+			.coverframe { border-color: @color; }
 		}
 
 		/*
@@ -448,6 +462,10 @@
 				width: 137px;
 				height: 100%;
 				background: url() center center / cover no-repeat #ececec;
+
+				&.blurred {
+					filter: blur(12px);
+				}
 			}
 			.dataContent {
 				width: ~"calc(100% - 137px)";

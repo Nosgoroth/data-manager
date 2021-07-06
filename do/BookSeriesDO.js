@@ -11,6 +11,11 @@
 		// Physical (Amazon US)
 		[...document.querySelectorAll(".a-link-normal")].filter(el => (el.text && el.text.includes("Paperback"))).map(x => x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")).join("\n ")
 
+	colorder;asin;status;sourceasin;otherasin;orderlabel
+	Read = 1, Backlog = 2, Phys = 4, Source = 6 (ASIN will be interpreted as source asin), Available = 7
+
+
+
 	*/
 
 
@@ -394,6 +399,8 @@
 				2;B012345678;3
 				//Read = 1, Backlog = 2, Source = 6 (ASIN will be interpreted as source asin)
 				*/
+
+				//colorder;asin;status;sourceasin;otherasin;orderlabel
 
 				if (Array.isArray(rawdata)) {
 					this._rawdata = {};
@@ -903,7 +910,8 @@
 					.attr('data-status', status);
 				var $cc = $ctr.appendR('<span class="coverContainer">');
 				var $co = $cc.appendR('<span class="colorder">').text(orderLabel);
-				var $c = $cc.appendR('<span class="cover">')
+				var $cf = $cc.appendR('<span class="coverframe">');
+				var $c = $cf.appendR('<span class="cover">')
 					.css('background-image', 'url('+coverUrl+')')
 					;
 
@@ -1383,20 +1391,23 @@
 
 				
 
-				if (asin) {
-					addOption().html('<i class="icon-refresh"></i> Refresh image').click(function(){
-						$container.find(".cover").css('background-image', 'url('+this.getCoverUrl(coverSize, true)+')');
-					}.bind(this));
+				addOption().html('<i class="icon-refresh"></i> Refresh cover').click(function(){
+					$container.find(".cover").css('background-image', 'url('+this.getCoverUrl(coverSize, true)+')');
+				}.bind(this));
+				
+				addOption().html('<i class="icon-minus-sign"></i> Toggle blur cover').click(function(){
+					$container.find(".cover").toggleClass("blurred");
+				}.bind(this));
+			
 
-				}
 
 				if (imageAsin && (mainAsin || sourceAsin)) {
-					addOption().html('<i class="icon-remove"></i> Remove forced image').click(function(){
+					addOption().html('<i class="icon-remove"></i> Remove forced cover').click(function(){
 						this.setImageAsin("");
 						this.save();
 					}.bind(this));
 				} else if (!imageAsin && sourceAsin) {
-					addOption().html('<i class="icon-resize-vertical"></i> Force source image').click(function(){
+					addOption().html('<i class="icon-resize-vertical"></i> Force source cover').click(function(){
 						this.setImageAsin(sourceAsin);
 						this.save();
 					}.bind(this));
