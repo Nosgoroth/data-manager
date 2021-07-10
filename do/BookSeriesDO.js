@@ -2674,6 +2674,7 @@
 
 				const now = moment();
 				const isFinished = this.isFinishedPublication();
+				const hasNoSource = this.isHasNoSource();
 				let nextjp;
 				let nexten;
 				let nextjp_uncorrected;
@@ -2683,61 +2684,70 @@
 
 				try {
 
-					if (true || !isFinished) {
+					maxjp = jp.reduce((a,v) => (a>v[1] ? a : v[1]), 0);
+					//Can try to predict source if it isn't finished
+					if (!isFinished) {
+						nextjp = nextOcurrenceInListWeighted(jpdate);
+					}
 
-						if (!isFinished) {
-							nextjp = nextOcurrenceInListWeighted(jpdate);
+					try {
+						maxen = en.reduce((a,v) => (a>v[1] ? a : v[1]), 0);
+						// Can try to predict EN if:
+						if (
+							(!hasNoSource && //When it does have a source
+								(
+									maxen < maxjp //The release isn't caught up to source
+									|| nextjp //Or there is a prediction for next source release
+								)
+							) || (hasNoSource && //Or when it doesn't have a source
+								(
+									!isFinished //If it isn't finished
+								)
+							)
+							) {
+							nexten = nextOcurrenceInListWeighted(endate);
 						}
-						maxjp = jp.reduce((a,v) => (a>v[1] ? a : v[1]), 0);
+					} catch(e) {
+						maxen = 0;
+					}
 
-						try {
-							maxen = en.reduce((a,v) => (a>v[1] ? a : v[1]), 0);
-							if (nextjp || maxen < maxjp) {
-								nexten = nextOcurrenceInListWeighted(endate);
-							}
-						} catch(e) {
-							maxen = 0;
-						}
+					nextjp_uncorrected = nextjp ? moment(nextjp) : null;
+					nexten_uncorrected = nexten ? moment(nexten) : null;
 
-						nextjp_uncorrected = nextjp ? moment(nextjp) : null;
-						nexten_uncorrected = nexten ? moment(nexten) : null;
+					if (nextjp && nextjp.isBefore(now)) { nextjp = now; }
+					if (nexten && nexten.isBefore(now)) { nexten = now; }
 
-						if (nextjp && nextjp.isBefore(now)) { nextjp = now; }
-						if (nexten && nexten.isBefore(now)) { nexten = now; }
-
-						//Don't allow predict if predicted date doesn't account for weighted mean loc time (max 6 months)
-						if (nexten && leadtimes.length) {
-							const targetjp = maxen+1;
-							let _item;
-							if (nextjp && maxjp === maxen) {
-								_item = moment(nextjp);
-							} else {
-								const item = jp.filter(x => x[1] == targetjp)[0];
-								if (item) {
-									_item = moment.unix(item[0] / 1000);
-								}
-							}
-							if (_item){
-								// Minimum time a volume has taken to be released in English
-								let lead = leadtimes.reduce((a,v) => (a<v ? a : v), Infinity);
-
-								// Cap it at 10 months
-								const maxlead = 60*60*24*(365/12)*10; // 10 months
-								if (lead > maxlead) {
-									lead = maxlead;
-								}
-
-								// Take into account this lead time when computing next release date
-								const nexten_withlead = _item.add(lead, "seconds");
-								if (nexten.isBefore(nexten_withlead)) {
-									nexten = moment(nexten_withlead);
-								}
-								if (nexten_uncorrected.isBefore(nexten_withlead)) {
-									nexten_uncorrected = moment(nexten_withlead);
-								}
+					//Don't allow predict if predicted date doesn't account for weighted mean loc time (max 6 months)
+					if (nexten && leadtimes.length) {
+						const targetjp = maxen+1;
+						let _item;
+						if (nextjp && maxjp === maxen) {
+							_item = moment(nextjp);
+						} else {
+							const item = jp.filter(x => x[1] == targetjp)[0];
+							if (item) {
+								_item = moment.unix(item[0] / 1000);
 							}
 						}
-						
+						if (_item){
+							// Minimum time a volume has taken to be released in English
+							let lead = leadtimes.reduce((a,v) => (a<v ? a : v), Infinity);
+
+							// Cap it at 10 months
+							const maxlead = 60*60*24*(365/12)*10; // 10 months
+							if (lead > maxlead) {
+								lead = maxlead;
+							}
+
+							// Take into account this lead time when computing next release date
+							const nexten_withlead = _item.add(lead, "seconds");
+							if (nexten.isBefore(nexten_withlead)) {
+								nexten = moment(nexten_withlead);
+							}
+							if (nexten_uncorrected.isBefore(nexten_withlead)) {
+								nexten_uncorrected = moment(nexten_withlead);
+							}
+						}
 					}
 
 				} catch (e) {
