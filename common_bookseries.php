@@ -225,8 +225,7 @@ class KoboScraper {
 }
 
 
-
-function bookVolumeCheckDelay($volume) {
+function bookVolumeCheckDelay($volume, $options) {
 
 	$res = [
 		"ok" => false,
@@ -235,6 +234,11 @@ function bookVolumeCheckDelay($volume) {
 		"isDelay" => false,
 		"updatedDate" => null,
 	];
+	
+	$options = array_merge([
+		"ALLOW_AMAZON_DELAY_CHECKS" => false,
+		"AMAZON_DEBUG" => false
+	], (is_array($options) ? $options : []));
 
 	try {
 		$date = isset($volume["releaseDate"]) ? $volume["releaseDate"] : null;
@@ -244,13 +248,13 @@ function bookVolumeCheckDelay($volume) {
 
 		
 		$updatedDate = null;
-		if ($volume["asin"] && false) {
-			$scraper = new AmazonComAsinScraper($volume["asin"]);
-			$scraper->read();
-			$updatedDate = $scraper->extractPubDateDDMMYY();
-		} else if (isset($volume["koboId"]) && $volume["koboId"]) {
+		if (isset($volume["koboId"]) && $volume["koboId"]) {
 			$scraper = new KoboScraper($volume["koboId"]);
 			$scraper->read();
+			$updatedDate = $scraper->extractPubDateDDMMYY();
+		} else if ($volume["asin"] && $options["ALLOW_AMAZON_DELAY_CHECKS"]) {
+			$scraper = new AmazonComAsinScraper($volume["asin"]);
+			$scraper->read($options["AMAZON_DEBUG"]);
 			$updatedDate = $scraper->extractPubDateDDMMYY();
 		} else {
 			$res["error"] = "No valid store";

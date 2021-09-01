@@ -466,7 +466,7 @@ window.BookSeriesIssueItem = Object.extends({
 		this.lastVolume = volumesCOL[volumesCOL.length - 1];
 		this.nextVolumeColorder = this.lastVolume ? this.lastVolume.getColorder() + 1 : 1;
 		this.firstUnownedVolume = this.bookSeriesDO.getFirstUnownedVolume();
-		this.firstUnownedColorder = this.firstUnownedVolume?.getColorder() ?? 1;
+		this.firstUnownedColorder = this.firstUnownedVolume?.getColorder() ?? this.nextVolumeColorder;
 	},
 
 	save: function(complete) {
@@ -562,7 +562,7 @@ window.BookSeriesIssueItem = Object.extends({
 		  </ul>
 		</div>`);
 		$x.find("button").first()
-			.text(label)
+			.text(label ? label : "No action")
 			.click(evt => {
 				evt.preventDefault();
 				action();
@@ -711,13 +711,25 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
 				actions = this.firstUnownedVolume?.getStoreLinkActions();
+				if (actions?.length) {
+					actions.push({ divider: true });
+				}
+				actions = actions.concat(this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder));
+				break;
+
+			case BookSeriesIssue.AwaitingStoreAvailability:
+				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
+				if (actions?.length) {
+					actions.push({ divider: true });
+				}
+				actions = actions.concat(this.firstUnownedVolume?.getStoreLinkActions());
 				break;
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
 				break;
 			case BookSeriesIssue.NoLocalStoreReferences:
-				actions = this.bookSeriesDO.getStoreSearchActions(this.volumeWithIssueDO.getColorder());
+				actions = this.bookSeriesDO.getStoreSearchActions(this.volumeWithIssueDO?.getColorder());
 				break;
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
@@ -725,12 +737,7 @@ window.BookSeriesIssueItem = Object.extends({
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.nextVolumeColorder);
 				break;
 			case BookSeriesIssue.NoSourceStoreReferences:
-				console.log(this.volumeWithIssueDO.getColorder());
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.volumeWithIssueDO.getColorder());
-				break;
-			case BookSeriesIssue.AwaitingStoreAvailability:
-				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
-				actions = actions.concat(this.firstUnownedVolume?.getStoreLinkActions());
 				break;
 			case BookSeriesIssue.MissingInformation:
 				actions = [{
@@ -887,6 +894,11 @@ window.BookSeriesIssueItem = Object.extends({
 			lastActionsLength = actions.length;
 			actions.push({ divider: true });
 		}
+		actions.push({ divider: true });
+		actions.push({ divider: true });
+		actions.push({ divider: true });
+		actions.push({ divider: true });
+		actions.push({ divider: true });
 
 		actions.push({
 			label: "Edit notes",
@@ -915,7 +927,32 @@ window.BookSeriesIssueItem = Object.extends({
 			});
 		}
 
-		if (actions[1]?.divider) {
+		// Collapse multiple contiguous dividers to a single one
+		/*
+		const newActions = [];
+		let lastWasDivider = false;
+		for (let action of actions) {
+			const isDivider = !!action?.divider;
+			if (!isDivider || !lastWasDivider) {
+				newActions.push(action);
+			}
+			lastWasDivider = isDivider;
+		}
+		actions = newActions;
+		*/
+		for (var i = 0; i < actions.length; i++) {
+			while (actions[i]?.divider && actions[i+1]?.divider) {
+				actions.splice(i+1, 1);
+			}
+		}
+
+
+		// Since the first action will be the button, it shouldn't be a divider
+		while (actions[0]?.divider) {
+			actions.splice(0, 1);
+		}
+		// Since the first action will be the button, the second action shouldn't be a divider
+		while (actions[1]?.divider) {
 			actions.splice(1, 1);
 		}
 

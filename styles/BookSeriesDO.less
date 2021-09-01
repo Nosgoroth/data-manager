@@ -89,7 +89,7 @@
 			line-height: 100%;
 		}
 
-		.dropdown-menu {
+		& > .dropdown-menu {
 			&:before {
 				position: absolute;
 				top: -7px;
@@ -216,8 +216,12 @@
 		}
 	}
 
+	.dataObjectItem.separator {
+		border-top: 4px solid #a6ccff;
+	}
 	.dataObjectItem.futureSeparator {
-		border-top: 3px solid #E00;
+		border-top: 6px solid #E00;
+
 	}
 
 
@@ -610,8 +614,12 @@
 			background: #222;
 		}
 
+
+		.dataObjectItem.separator {
+			border-top: 3px solid #a6ccff;
+		}
 		.dataObjectItem.futureSeparator {
-			border-top: 3px solid #ff1f1f;
+			border-top: 6px solid #ff544f;
 		}
 
 		.dataObjectItem {

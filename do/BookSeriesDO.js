@@ -2124,7 +2124,7 @@
 				) {
 					const releaseDate = firstUnowned.getReleaseDateMoment();
 					const now = moment();
-					if (releaseDate.isAfter(now)) {
+					if (releaseDate?.isAfter(now)) {
 						if (!(seriesStatus === BookSeriesDO.Enum.Status.Announced && options.ignorePreorderAvailableForAnnounced)) {
 							return [BookSeriesIssue.PreorderAvailable, firstUnowned];
 						}
@@ -2284,7 +2284,11 @@
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
 						{
-							const volumeDO = this.getFirstUnownedVolume();
+							let volumeDO = this.getFirstUnownedVolume();
+							if (!volumeDO) {
+								// This can happen when the series has no source
+								volumeDO = this.addNextVolume();
+							}
 							volumeDO.setAsin(asin);
 							if (asin.startsWith("B")) {
 								if ([
@@ -2303,7 +2307,7 @@
 						break;
 					case BookSeriesIssue.NoLocalStoreReferences:
 						{
-							const volumeDO = this.isAnyVolumeNoLocalStoreReferences();
+							let volumeDO = this.isAnyVolumeNoLocalStoreReferences();
 							volumeDO.setAsin(asin);
 							if (asin.startsWith("B")) {
 								if ([
@@ -2438,11 +2442,13 @@
 			},
 
 			addNextVolume: function(data) {
+				data = data ? data : {};
 				const volumes = this.getVolumes();
 				const lastVolume = volumes[volumes.length - 1];
 				const lastVolumeColorder = lastVolume.getColorder();
 				const newVolume = BookSeriesVolumeDO.DO(Object.shallowExtend({},data,{
-					colorder: lastVolumeColorder + 1
+					colorder: lastVolumeColorder + 1,
+					status: BookSeriesVolumeDO.Enum.Status.None,
 				}));
 				volumes.push(newVolume);
 				lastVolume.setNextVolume(newVolume);
@@ -3337,7 +3343,7 @@
 				this._COL.forEach(function(bookSeriesDO){
 
 					var status = bookSeriesDO.getStatus();
-					if ([BSEnumStatus.Drop].includes(status)) {
+					if ([BSEnumStatus.Drop, BSEnumStatus.Consider].includes(status)) {
 						return;
 					}
 
@@ -3581,24 +3587,92 @@
 
 			_afterRender: function(){
 
-				//Future separator
-				setTimeout(function(){
-					if (this._COLsort === "notes" && !this._reverseSort) {
-						var now = moment();
+				//Future separators
+				setTimeout(() => {
+					if (this._COLsort !== "notes" || this._reverseSort) {
+						return;
+					}
 
-						for (var i = 0; i < this._COL.length; i++) {
-							var do_inst = this._COL[i];
-							var $row = this.$container.find('.dataObjectItem.infoRow[data-id="'+do_inst.pkGet()+'"]');
-							if (!$row.is(":visible")) { continue; }
-							var date = do_inst.parseNotesDate();
-							if (!date) { continue; }
-							if (date.isAfter(now)) {
-								$row.addClass("futureSeparator");
-								break;
-							}
+					const now = moment();
+					const addedSeparator = {};
+					let addedFutureSeparator = false;
+					let addedJpSeparator = false;
+
+					const shouldAddSeparatorClass = (controlBitName, conditionalCallback) => {
+						if (!addedSeparator[controlBitName] && conditionalCallback()) {
+							addedSeparator[controlBitName] = true;
+							return true;
+						} else {
+							return false;
 						}
 					}
-				}.bind(this), 200)
+					const addSeparatorClass = ($row, separatorClass, controlBitName, conditionalCallback) => {
+						if (shouldAddSeparatorClass(controlBitName, conditionalCallback)) {
+							$row.toggleClass(separatorClass, true);
+							return true;
+						} else {
+							return false;
+						}
+					}
+
+					for (let i = 0; i < this._COL.length; i++) {
+						const do_inst = this._COL[i];
+						const name = do_inst.getName();
+						// console.log("Processing row", name);
+						const $row = this.$container.find('.dataObjectItem[data-id="'+do_inst.pkGet()+'"]').first();
+						if (!$row.is(":visible")) { continue; }
+						
+						const notes = do_inst.getNotes();
+						const date = do_inst.parseNotesDate();
+
+						const separatorDefinitions = [
+							{
+								controlBitName: "anyNotes",
+								separatorClass: "separator",
+								conditionalCallback: () => !!notes
+							},
+							{
+								controlBitName: "future",
+								separatorClass: "futureSeparator",
+								conditionalCallback: () => (date && date.isAfter(now))
+							},
+							{
+								controlBitName: "jp",
+								separatorClass: "separator",
+								conditionalCallback: () => !!(notes && notes.substr(0, 2) === "JP")
+							},
+							{
+								controlBitName: "stall",
+								separatorClass: "separator",
+								conditionalCallback: () => !!(notes && notes.substr(0, 5) === "STALL")
+							},
+							{
+								controlBitName: "unlicensed",
+								separatorClass: "separator",
+								conditionalCallback: () => !!(notes && notes.substr(0, 5) === "UNLIC")
+							},
+						];
+
+						let anySeparators = false;
+						separatorDefinitions.forEach(def => {
+							const ret = addSeparatorClass(
+								$row,
+								def.separatorClass,
+								def.controlBitName,
+								def.conditionalCallback,
+							);
+							anySeparators |= ret;
+							if (ret) {
+								// console.info( "Added separator", def.controlBitName, "on element", do_inst.getName(), "with notes", notes );
+							}
+						});
+						if (!anySeparators) {
+							// console.log("No separator added for element", do_inst.getName(), "with notes", "~"+notes+"~");
+						}
+					}
+
+					
+				}, 200)
 
 
 
