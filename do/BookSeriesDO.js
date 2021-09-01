@@ -771,6 +771,19 @@
 				var co = this.getColorder();
 				return (ol ? ol : ( isNaN(co) ? '-' : co ));
 			},
+			getLargeCoverUrlForAsin: function(asin){
+				if (!asin || asin.startsWith("http") || asin.startsWith("//")) {
+					return null;
+				}
+				return "http://z2-ec2.images-amazon.com/images/P/"+asin+".01.MAIN._SCRM_.jpg";
+				return this.getImageAsin() || this.getAsin() || this.getSourceAsin();
+			},
+			getLargeCoverUrl: function(){
+				return this.getLargeCoverUrlForAsin( this.getAsin() || this.getImageAsin() );
+			},
+			getLargeCoverUrlSource: function(){
+				return this.getLargeCoverUrlForAsin( this.getSourceAsin() || this.getImageAsin() );
+			},
 			getCoverUrl: function(width, refresh){
 				var asin = this.getBestAsinForImage();
 				if (!asin) {
@@ -1084,14 +1097,25 @@
 				var $dropdown = jQuery('<ul class="dropdown-menu" role="menu">');
 
 				var lastWasSeparator = true;
-				var addOption = function(){
-					lastWasSeparator = false;
-					return $dropdown.appendR('<li>').appendR('<a>');
+				var addOption = function($submenu){
+					if (!$submenu) { lastWasSeparator = false; }
+					$submenu = $submenu ? $submenu : $dropdown;
+					return $submenu.appendR('<li>').appendR('<a>');
 				}
-				var addSeparator = function(){
-					if (lastWasSeparator) { return; }
-					lastWasSeparator = true;
-					return $dropdown.appendR('<li>').addClass('divider');
+				var addSubmenu = function(label){
+					lastWasSeparator = false;
+					var $submenu = $dropdown.appendR('<li class="dropdown-submenu"><a tabindex="-1" href="#">More options</a><ul class="dropdown-menu"></ul></li>');
+					$submenu.find("a").text(label);
+					return $submenu.find(".dropdown-menu");
+				}
+				var addSeparator = function($submenu){
+					if (!$submenu) {
+						if (lastWasSeparator) { return; }
+						lastWasSeparator = true;
+					}
+					$submenu = $submenu ? $submenu : $dropdown;
+					
+					return $submenu.appendR('<li>').addClass('divider');
 				}
 				
 				var addSetStatusOption = function(newstatus, name){
@@ -1389,35 +1413,59 @@
 					addSeparator();
 				}
 
+				const $coverSubmenu = addSubmenu("Cover options");
+
+				let anyLargeCoverLinksShown = false;
+				const largeCover = this.getLargeCoverUrl();
+				const largeCoverSource = this.getLargeCoverUrlSource();
+
+				if (largeCover) {
+					addOption($coverSubmenu).html('<i class="icon-picture"></i> Large cover').click(() => {
+						window.open(largeCover, "_blank");
+					});
+					anyLargeCoverLinksShown = true;
+				}
+				if (largeCoverSource) {
+					addOption($coverSubmenu).html('<i class="icon-picture"></i> Large cover source').click(() => {
+						window.open(largeCoverSource, "_blank");
+					});
+					anyLargeCoverLinksShown = true;
+				}
+
+				if (anyLargeCoverLinksShown) {
+					addSeparator($coverSubmenu);
+				}
+
 				
 
-				addOption().html('<i class="icon-refresh"></i> Refresh cover').click(function(){
+				addOption($coverSubmenu).html('<i class="icon-refresh"></i> Refresh cover').click(function(){
 					$container.find(".cover").css('background-image', 'url('+this.getCoverUrl(coverSize, true)+')');
 				}.bind(this));
 				
-				addOption().html('<i class="icon-minus-sign"></i> Toggle blur cover').click(function(){
+				addOption($coverSubmenu).html('<i class="icon-minus-sign"></i> Toggle blur cover').click(function(){
 					$container.find(".cover").toggleClass("blurred");
 				}.bind(this));
 			
 
 
 				if (imageAsin && (mainAsin || sourceAsin)) {
-					addOption().html('<i class="icon-remove"></i> Remove forced cover').click(function(){
+					addOption($coverSubmenu).html('<i class="icon-remove"></i> Remove forced cover').click(function(){
 						this.setImageAsin("");
 						this.save();
 					}.bind(this));
 				} else if (!imageAsin && sourceAsin) {
-					addOption().html('<i class="icon-resize-vertical"></i> Force source cover').click(function(){
+					addOption($coverSubmenu).html('<i class="icon-resize-vertical"></i> Force source cover').click(function(){
 						this.setImageAsin(sourceAsin);
 						this.save();
 					}.bind(this));
 				}
 
+				addSeparator();
+
 				addOption().html('<i class="icon-eye-close"></i> Hide').click(function(){
 					$container.hide();
 				}.bind(this));
 
-				addSeparator();
 
 				addOption().html('<i class="icon-pencil"></i> Edit series').click(this.throwParentEditForm.bind(this));
 
