@@ -46,7 +46,7 @@ if (file_exists('../../login.php')) {
 
 	<br/>
 
-	<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-month-app">Show data table</button>
+	<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-month-app">Toggle data table</button>
 	<div id="book-stats-month-app" class="collapse"></div>
 
 	<h3>By year</h3>
@@ -55,8 +55,21 @@ if (file_exists('../../login.php')) {
 
 	<br/>
 
-	<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-year-app">Show data table</button>
+	<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-year-app">Toggle data table</button>
 	<div id="book-stats-year-app" class="collapse"></div>
+
+	<h3>JNC credit usage by month</h3>
+	<p><small>Preorder dates, or purchase dates if not available. Older figures may be unreliable.</small></p>
+
+	<div class="btn-group">
+		<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-graph-jnc-year">Toggle yearly graph</button>
+		<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-graph-jnc-month">Toggle monthly graph</button>
+		<button type="button" class="btn btn-inverse btn-small" data-toggle="collapse" data-target="#book-stats-jnc-app">Toggle monthly data table</button>
+	</div>
+	
+	<div id="book-stats-graph-jnc-year"></div>
+	<div id="book-stats-graph-jnc-month" class="collapse"></div>
+	<div id="book-stats-jnc-app" class="collapse"></div>
 
 </div>
 
@@ -64,11 +77,11 @@ if (file_exists('../../login.php')) {
 <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/jquery.waitforimages/2.4.0/jquery.waitforimages.min.js"></script>
 <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/js/bootstrap.min.js'></script>
 <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'></script>
-<script async src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.min.js"></script>
 <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.18.0/js/md5.min.js'></script>
 <script src="//cdn.jsdelivr.net/npm/less@3.13" ></script>
-<script async src="https://code.highcharts.com/highcharts.src.js"></script>
-<script async src="https://code.highcharts.com/themes/high-contrast-dark.js"></script>
+<script src="https://code.highcharts.com/highcharts.src.js"></script>
+<script src="https://code.highcharts.com/themes/high-contrast-dark.js"></script>
 
 <!-- DOOP -->
 <script type='text/javascript' src='../../res/doop/oop.js'></script>

@@ -83,6 +83,10 @@ if (file_exists('login.php')) {
 		customMultiDataObjectEditor.setDefaultType(<?= json_encode($_REQUEST["type"]) ?>);
 	</script>
 	<?php } ?>
+
+	<script type="text/javascript">
+		window._customAjaxAvailable = <?= json_encode(glob("customajax_*.php")) ?>;
+	</script>
 	
 
 </div>

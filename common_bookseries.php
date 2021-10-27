@@ -156,13 +156,15 @@ class KoboScraper {
 	function read($debug = false) {
 		$this->raw = file_get_contents("https://www.kobo.com/es/en/ebook/".$this->id, false, stream_context_create(array(
 			"http" => array(
+				"timeout" => 10,
 				"method" => "GET",
 		        "header" => implode("\r\n", array(
-		        	"user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
-					"referer: https://www.kobo.com/",
-					"Accept-Language: es,en-GB;q=0.9,en;q=0.8,ca;q=0.7,ja;q=0.6",
-					"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-		        	"Accept-Encoding: none",
+		        	"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+					"Accept-Language: en-GB",
+					"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		        	"Accept-Encoding: gzip, deflate, br",
+		        	"Host: www.kobo.com",
+		        	"Connection: keep-alive",
 		        ))
 			)
 		)));
@@ -290,3 +292,51 @@ function bookVolumeNormalizeDDMMYY($date) {
 	return $dp["day"]."/".$dp["month"]."/".$dp["year"];
 }
 
+
+
+
+
+$zdateRelativePeriods = [
+	[60, 1, '%s seconds ago', 'a second ago', 'in %s seconds', 'in a second'],
+	[60*100, 60, '%s minutes ago', 'one minute ago', 'in %s minutes', 'in a minute'],
+	[3600*70, 3600, '%s hours ago', 'an hour ago', 'in %s hours', 'in an hour'],
+	[3600*24*10, 3600*24, '%s days ago', 'yesterday', 'in %s days', 'tomorrow'],
+	[3600*24*30, 3600*24*7, '%s weeks ago', 'one week ago', 'in %s weeks', 'in a week'],
+	[3600*24*30*30, 3600*24*30, '%s months ago', 'last month', 'in %s months', 'in a month'],
+	[INF, 3600*24*265, '%s years ago', 'last year', 'in %s years', 'in a year'],
+];
+function zdateRelative($date, $now = null) {
+	global $zdateRelativePeriods;
+	$now = $now ? $now : time();
+	$diff = $now - $date;
+	if ($diff > 0) {
+		foreach ($zdateRelativePeriods as $period) {
+			if ($diff > $period[0]) continue;
+			$diff = round($diff / $period[1]);
+			return sprintf($diff > 1 ? $period[2] : $period[3], $diff);
+		}
+	} elseif ($diff < 0) {
+		$diff = $diff * -1;
+		foreach ($zdateRelativePeriods as $period) {
+			if ($diff > $period[0]) continue;
+			$diff = round($diff / $period[1]);
+			return sprintf($diff > 1 ? $period[4] : $period[5], $diff);
+		}
+	} else {
+		return 'now';
+	}
+}
+
+function zdateRelativeWrapper($date, $now = null) {
+	$ret = zdateRelative($date, $now);
+	if ($ret === "in 48 hours") {
+		return "in 2 days";
+	}
+	if ($ret === "in 24 hours") {
+		return "tomorrow";
+	}
+	if ($ret === "now") {
+		return "today";
+	}
+	return $ret;
+}

@@ -374,6 +374,14 @@
 		},
 		extraPrototype: {
 
+			getUniqueId: function () {
+				return this.parent?.getName()
+					+"_"+this.getColorder()
+					+"_"+this.getBestAsinForLink()
+					+"_"+this.getKoboId()
+					;
+			},
+
 			isManualPhysKindleCheckOnly: function() {
 				return this.get("manualPhysKindleCheckOnly", false, "boolean")
 					|| this.get("manualTpbKindleCheckOnly", false, "boolean")
@@ -570,7 +578,6 @@
 			canScrapeForKoboData: function() {
 				return (
 					this.canScrapeForKoboPubDate()
-					|| this.canScrapeForKoboIsbn()
 					|| this.canScrapeForKoboImage()
 				);
 			},
@@ -845,6 +852,9 @@
 				if (!rd) { return null; }
 				return moment(rd, "DD/MM/YYYY");
 			},
+			setReleaseDateMoment: function(_m) {
+				this.setReleaseDate(_m.format("DD/MM/YYYY"));
+			},
 			getReleaseDateSourceMoment: function(){
 				var rd = this.getReleaseDateSource();
 				if (!rd) { return null; }
@@ -891,6 +901,13 @@
 			getPreorderDateMoment: function() {
 				const m = moment(this.getPreorderDate(), 'DD/MM/YYYY');
 				return m.isValid() ? m : null;
+			},
+			getPreorderOrPurchaseDateMoment: function() {
+				const preorderMoment = this.getPreorderDateMoment();
+				if (preorderMoment) { return preorderMoment; }
+				const purchaseMoment = this.getPurchasedDateMoment();
+				if (purchaseMoment) { return purchaseMoment; }
+				return null;
 			},
 
 			hasNotes: function(){
@@ -1297,7 +1314,6 @@
 				}
 
 
-
 				if (searchActions && searchActions.length) {
 					for (let searchAction of searchActions) {
 						addOption()
@@ -1412,6 +1428,84 @@
 				if (anySeriesLinkShown) {
 					addSeparator();
 				}
+
+
+
+
+				const _releaseDate = this.getReleaseDateMoment();
+				if (_releaseDate && [
+					this.__static.Enum.Status.Preorder,
+					this.__static.Enum.Status.StoreWait,
+					this.__static.Enum.Status.Available,
+					this.__static.Enum.Status.Phys,
+					].includes(status)) {
+
+					const $delaySubmenu = addSubmenu("Delay");
+					
+					const addDelayOption = function(units, unitName, _delayedMoment){
+						let name;
+						if (units && unitName) {
+							_delayedMoment = moment(_releaseDate).add(units, unitName);
+							name = units + ' ' + unitName
+								+ ' ('
+								+ _releaseDate.format("DD/MMM")
+								+ ' -> '
+								+ _delayedMoment.format("DD/MMM")
+								+ ')'
+								;
+						} else if (_delayedMoment) {
+							name = 'From '
+								+ _releaseDate.format("DD/MMM")
+								+ ' to '
+								+ _delayedMoment.format("DD/MMM")
+								;
+						} else {
+							return;
+						}
+						
+						return addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> '+name).click(function(){
+							this.setReleaseDateMoment(_delayedMoment);
+							this.save();
+						}.bind(this));
+					}.bind(this);
+
+					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input date').click(function(){
+						const def = _releaseDate.format("DD/MM/YYYY");
+						const value = prompt("Enter new release date (DD/MM/YYYY)", def);
+						if (!value || value === def) { return; }
+						this.setReleaseDate(value);
+						this.save();
+					}.bind(this));
+					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input interval').click(function(){
+						const value = prompt("Enter interval (6 weeks, -2 months, 5 years)");
+						if (!value) { return; }
+						const split = value.replace(/\s+/, " ").split(" ");
+						if (split.length !== 2) { return; }
+						const _target = moment(_releaseDate).add(parseFloat(split[0]), split[1]);
+						if (!_target || !_target.isValid()) { return; }
+						const from = _releaseDate.format("DD/MMM/YYYY");
+						const to = _target.format("DD/MMM/YYYY");
+						const proceed = confirm('Delay from ' + from + ' to ' + to + '?');
+						if (!proceed) { return; }
+						this.setReleaseDateMoment(_target);
+						this.save();
+					}.bind(this));
+					addSeparator($delaySubmenu);
+					addDelayOption(1, 'week');
+					addDelayOption(2, 'weeks');
+					addDelayOption(3, 'weeks');
+					addDelayOption(4, 'weeks');
+					addDelayOption(5, 'weeks');
+					addSeparator($delaySubmenu);
+					addDelayOption(1, 'month');
+					addDelayOption(2, 'months');
+					addDelayOption(3, 'months');
+					addSeparator($delaySubmenu);
+					addDelayOption(1, 'year');
+					
+
+				}
+
 
 				const $coverSubmenu = addSubmenu("Cover options");
 
@@ -1880,7 +1974,8 @@
 				if (koboSeriesId && !volumeNumber) {
 					return "https://www.kobo.com/es/en/search?query="+encodeURIComponent(kss)+"&fcsearchfield=Series&seriesId="+encodeURIComponent(koboSeriesId)+"&sort=PublicationDateDesc"
 				} else {
-					return "https://www.kobo.com/es/en/search?query="+encodeURIComponent(kss);
+					const ekss = encodeURIComponent(kss);
+					return "https://www.kobo.com/es/en/search?query="+ekss+"&nd=true&ac=1&ac.title="+ekss;
 				}
 			},
 			getRightstufSearchLink: function(volumeNumber) {
@@ -2010,6 +2105,19 @@
 				})[0];
 			},
 
+			getFirstUnavailableSourceVolume: function() {
+				const volumesCOL = this.getVolumes();
+				return volumesCOL.filter(x => {
+					if (x.isTreatAsNotSequential()) {
+						return false;
+					}
+					const st = x.getStatus();
+					return (
+						st === BookSeriesVolumeDO.Enum.Status.Source
+					);
+				})[0];
+			},
+
 			isAnyVolumeMissingDateInformation: function() {
 				const volumesCOL = this.getVolumes();
 				for (var i = 0; i < volumesCOL.length; i++) {
@@ -2061,8 +2169,8 @@
 			},
 
 			// Legacy
-			getIssue: function(){
-				return this.getIssues()[0] ?? null;
+			getIssue: function(options){
+				return this.getIssues(options)[0] ?? null;
 			},
 
 			ShouldIgnoreIssuesType: {
@@ -2146,6 +2254,10 @@
 					return null;
 				}
 
+				if (this.getIssueMissingInformation(options)) {
+					return null;
+				}
+
 				const firstUnowned = this.getFirstUnownedVolume();
 				const firstUnownedStatus = firstUnowned?.getStatus() ?? null;
 				const seriesStatus = this.getStatus();
@@ -2193,8 +2305,12 @@
 
 				const graphData = this.getPublicationGraphData();
 
-				if (this.isLocalVolumeOverdue(graphData, options.localOverdueOffset)) {
-					return [BookSeriesIssue.LocalVolumeOverdue];
+				const localVolumeOverdue = this.isLocalVolumeOverdue(graphData, options.localOverdueOffset);
+				if (localVolumeOverdue) {
+					return [
+						BookSeriesIssue.LocalVolumeOverdue,
+						this.getVolumeWithOrder(localVolumeOverdue)
+					];
 				}
 
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Source) {
@@ -2209,6 +2325,10 @@
 				options = options ? options : {};
 
 				if (this.shouldIgnoreIssues(this.ShouldIgnoreIssuesType.Source, options)) {
+					return null;
+				}
+
+				if (this.getIssueMissingInformation(options)) {
 					return null;
 				}
 
@@ -2332,7 +2452,7 @@
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
 						{
-							let volumeDO = this.getFirstUnownedVolume();
+							let volumeDO = issue?.volumeWithIssueDO ?? this.getFirstUnavailableSourceVolume();
 							if (!volumeDO) {
 								// This can happen when the series has no source
 								volumeDO = this.addNextVolume();
@@ -2376,6 +2496,7 @@
 						{
 							const volumeDO = this.isAnyVolumeNoSourceStoreReferences();
 							volumeDO.setSourceAsin(asin);
+							volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.Source);
 							this.saveUpdatedVolume(volumeDO, true);
 						}
 						break;
@@ -2494,10 +2615,14 @@
 				const volumes = this.getVolumes();
 				const lastVolume = volumes[volumes.length - 1];
 				const lastVolumeColorder = lastVolume.getColorder();
-				const newVolume = BookSeriesVolumeDO.DO(Object.shallowExtend({},data,{
-					colorder: lastVolumeColorder + 1,
+				data = Object.shallowExtend({
+					// Defaults
 					status: BookSeriesVolumeDO.Enum.Status.None,
-				}));
+				}, data, {
+					// Overwrites data
+					colorder: lastVolumeColorder + 1,
+				});
+				const newVolume = BookSeriesVolumeDO.DO(data);
 				volumes.push(newVolume);
 				lastVolume.setNextVolume(newVolume);
 				newVolume.setPreviousVolume(lastVolume);
@@ -2508,8 +2633,9 @@
 			isLocalVolumeOverdue: function(cachedPubGraphData, offsetSeconds){
 				offsetSeconds = offsetSeconds ?? 0;
 				const data = cachedPubGraphData ? cachedPubGraphData : this.getPublicationGraphData();
-				return data.nexten
-					? moment().add(offsetSeconds, 'seconds').isSameOrAfter(data.nexten, 'days')
+				if (!data.nexten) { return null; }
+				return moment().add(offsetSeconds, 'seconds').isSameOrAfter(data.nexten, 'days')
+					? data.nexten
 					: null
 					;
 			},
@@ -3626,11 +3752,39 @@
 					.attr("target", "_blank")
 					.text("BookCheck")
 					;
-				$topRow.appendR('<a class="btn">')
+
+				const $ddm = $topRow.appendR('<div class="btn-group"><button class="btn dropdown-toggle" data-toggle="dropdown">More <span class="caret"></span></button><ul class="dropdown-menu pull-right"></ul></div>').find(".dropdown-menu");
+				let _addSeparatorNext = false;
+				const addOption = function(){
+					if (_addSeparatorNext) {
+						actuallyAddSeparator();
+						_addSeparatorNext = false;
+					}
+					return $ddm.appendR('<li>').appendR('<a>');
+				}
+				const addSeparator = function(){ _addSeparatorNext = true; }
+				const actuallyAddSeparator = function(){ return $ddm.appendR('<li>').addClass('divider'); }
+
+				addOption()
 					.attr("href", "./tools/bookstats/")
 					.attr("target", "_blank")
 					.text("Stats")
 					;
+
+				if (window._customAjaxAvailable?.includes?.("customajax_delaychecker.php")) {
+
+					addSeparator();
+					addOption()
+						.attr("href", "./customajax_delaychecker.php?debug=1")
+						.attr("target", "_blank")
+						.text("Check delays")
+						;
+					addOption()
+						.attr("href", "./customajax_delaychecker.php?debug=1&apply=1")
+						.attr("target", "_blank")
+						.text("Apply delays")
+						;
+				}
 			},
 
 			_afterRender: function(){
@@ -4213,6 +4367,13 @@ BookSeriesDO.iterateAllSeries = function(callback) {
 		window.customMultiDataObjectEditor.saveAndUpdate();
 	}
 }
+
+
+BookSeriesDO.getSeriesByName = function(name) {
+	name = name.toLowerCase();
+	return this.getAllSeries().filter(x => x.getName().toLowerCase().includes(name))[0];
+}
+
 
 BookSeriesDO.setDummyReadDates = function() {
 	BookSeriesDO.iterateAllSeries((bookSeriesDO, volumesCOL) => {

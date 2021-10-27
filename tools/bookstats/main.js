@@ -109,6 +109,87 @@ function instanceGraph(dateCols) {
 	        }
 	    }]
 	});
+
+
+	const jncBoughtDataMonth = dateCols.preorder.filter("jnc").getGraphPointsByMonth();
+	const jncBoughtDataYear = dateCols.preorder.filter("jnc").getGraphPointsByYear();
+
+	Highcharts.chart(jQuery("#book-stats-graph-jnc-month").get(0), {
+	    chart: { type: 'spline', backgroundColor: "#000000" },
+	    title: { text: '' },
+	    xAxis: {
+	        type: 'datetime',
+	        dateTimeLabelFormats: {
+	            month: '%b %y',
+	            year: '%Y'
+	        },
+	        // title: { text: 'Date' },
+	    },
+	    yAxis: {
+	        title: { text: 'Volumes' },
+	        min: 0,
+	        allowDecimals: false
+	    },
+	    tooltip: {
+	        headerFormat: "",
+	        // pointFormat: '{point.items}'
+	    },
+	    plotOptions: {
+	        spline: {
+	            marker: {
+	                enabled: true
+	            }
+	        }
+	    },
+	    series: [{
+	        name: "Preordered or bought",
+	        color: "#004A9E",
+	        data: jncBoughtDataMonth,
+	        dataLabels: {
+	        	enabled: true,
+	        	format: "{point.y}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        }
+	    }]
+	});
+	Highcharts.chart(jQuery("#book-stats-graph-jnc-year").get(0), {
+	    chart: { type: 'spline', backgroundColor: "#000000" },
+	    title: { text: '' },
+	    xAxis: {
+	        type: 'datetime',
+	        dateTimeLabelFormats: {
+	            month: '%b %y',
+	            year: '%Y'
+	        },
+	        // title: { text: 'Date' },
+	    },
+	    yAxis: {
+	        title: { text: 'Volumes' },
+	        min: 0,
+	        allowDecimals: false
+	    },
+	    tooltip: {
+	        headerFormat: "",
+	        // pointFormat: '{point.items}'
+	    },
+	    plotOptions: {
+	        spline: {
+	            marker: {
+	                enabled: true
+	            }
+	        }
+	    },
+	    series: [{
+	        name: "Preordered or bought",
+	        color: "#004A9E",
+	        data: jncBoughtDataYear,
+	        dataLabels: {
+	        	enabled: true,
+	        	format: "{point.y}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        }
+	    }]
+	});
 }
 
 
@@ -194,8 +275,10 @@ class VolumeCollectionByDate {
 	constructor(type) {
 		this._type = type;
 		this.volumes = [];
+		this.moments = new Map();
 		this.monthIndex = new VolumeCollectionIndex();
 		this.yearIndex = new VolumeCollectionIndex();
+		this.filters = {};
 	}
 	
 	add(volumeDO, _moment) {
@@ -204,6 +287,7 @@ class VolumeCollectionByDate {
 		const year = _moment.format('YYYY');
 
 		this.volumes.push(volumeDO);
+		this.moments.set(volumeDO.getUniqueId(), _moment);
 		
 		this.monthIndex.add(volumeDO, month);
 		this.monthIndex.addKeyDate(month, moment(_moment).startOf('month'));
@@ -230,6 +314,21 @@ class VolumeCollectionByDate {
 	getGraphPointsByYear() {
 		return this.yearIndex.getGraphPoints();
 	}
+
+	filter(name, filterFunction) {
+		if (this.filters[name]) {
+			return this.filters[name];
+		}
+		if (!filterFunction) { return null; }
+		const filtered = new VolumeCollectionByDate(this._type);
+		for (const volumeDO of this.volumes) {
+			if (!filterFunction(volumeDO)) { continue; }
+			const _moment = this.moments.get(volumeDO.getUniqueId());
+			filtered.add(volumeDO, _moment);
+		}
+		this.filters[name] = filtered;
+		return filtered;
+	}
 }
 
 
@@ -244,6 +343,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 		const dateCols = {
 			read: new VolumeCollectionByDate('read'),
 			bought: new VolumeCollectionByDate('bought'),
+			preorder: new VolumeCollectionByDate('preorder'),
 		};
 		try {
 			window.dateCols = dateCols;
@@ -256,8 +356,11 @@ window.bookSeriesAjaxInterface = Object.extends({
 			volumes.forEach(volumeDO => {
 				dateCols.read.add(volumeDO, volumeDO.getReadDateMoment());
 				dateCols.bought.add(volumeDO, volumeDO.getPurchasedDateMoment());
+				dateCols.preorder.add(volumeDO, volumeDO.getPreorderOrPurchaseDateMoment());
 			});
 		});
+
+		dateCols.preorder.filter("jnc", x => (x.parent?.getStore() === BookSeriesDO.Enum.Store.JNC));
 
 		const thisYear = moment().format('YYYY');
 		const lastYear = moment().subtract(1, 'year').format('YYYY');
@@ -363,6 +466,33 @@ window.bookSeriesAjaxInterface = Object.extends({
 					.appendR('<td>').text(monthKey).parent()
 					.appendR('<td>').text(month.bought ?? 0).parent()
 					.appendR('<td>').text(month.read ?? 0).parent()
+					;
+			}
+
+
+		}
+		{
+			const $parent = jQuery("#book-stats-jnc-app");
+
+			const jncDateCols = dateCols.preorder.filter("jnc");
+
+			const months = jncDateCols.getMonthCounts();
+			const keys = Object.keys(months);
+			keys.sort();
+			keys.reverse();
+			
+			const $table = $parent.appendR('<table>').addClass('table');
+			const $thead = $table.appendR('<thead>').appendR('<tr>')
+				.appendR('<th>').text('Month').parent()
+				.appendR('<th>').text('Bought').parent()
+				;
+			const $tbody = $table.appendR('<tbody>');
+
+			for(const monthKey of keys) {
+				const month = months[monthKey];
+				$tbody.appendR('<tr>')
+					.appendR('<td>').text(monthKey).parent()
+					.appendR('<td>').text(month ?? 0).parent()
 					;
 			}
 

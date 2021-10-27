@@ -460,6 +460,7 @@ window.BookSeriesIssueItem = Object.extends({
 		this.bookSeriesDO = bookSeriesDO;
 		this.issue = issue;
 		this.volumeWithIssueDO = volumeWithIssueDO;
+		this.volumeWithIssueColorder = volumeWithIssueDO?.getColorder();
 
 		const volumesCOL = this.bookSeriesDO.getVolumes();
 
@@ -467,6 +468,8 @@ window.BookSeriesIssueItem = Object.extends({
 		this.nextVolumeColorder = this.lastVolume ? this.lastVolume.getColorder() + 1 : 1;
 		this.firstUnownedVolume = this.bookSeriesDO.getFirstUnownedVolume();
 		this.firstUnownedColorder = this.firstUnownedVolume?.getColorder() ?? this.nextVolumeColorder;
+		this.firstUnavailableSourceVolume = this.bookSeriesDO.getFirstUnavailableSourceVolume();
+		this.firstUnavailableSourceColorder = this.firstUnavailableSourceVolume?.getColorder() ?? this.nextVolumeColorder;
 	},
 
 	save: function(complete) {
@@ -599,11 +602,8 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
 			case BookSeriesIssue.NoLocalStoreReferences:
-				const unix = this.volumeWithIssueDO?.getReleaseDateMoment()?.unix();
-				if (unix) {
-					return unix;
-				}
-				return this.firstUnownedVolume?.getReleaseDateMoment()?.unix() ?? Infinity;
+				const vol = this.volumeWithIssueDO ?? this.firstUnownedVolume;
+				return vol?.getReleaseDateMoment()?.unix() ?? Infinity;
 
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
@@ -627,8 +627,10 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
 				{
-					const date = this.firstUnownedVolume.getReleaseDateMoment()?.fromNow() ?? '';
-					return `Vol. ${this.firstUnownedColorder} ${date}`;
+					const vol = this.volumeWithIssueDO ?? this.firstUnownedVolume;
+					const colorder = vol?.getColorder() ?? this.firstUnownedColorder;
+					const date = vol.getReleaseDateMoment()?.fromNow() ?? '';
+					return `Vol. ${colorder} ${date}`;
 				}
 			
 			case BookSeriesIssue.NoLocalStoreReferences:
@@ -644,7 +646,7 @@ window.BookSeriesIssueItem = Object.extends({
 				}
 
 			case BookSeriesIssue.WaitingForLocal:
-				volumeDO = this.firstUnownedVolume?.previousVolumeDO ?? null;
+				volumeDO = this.firstUnavailableSourceVolume?.previousVolumeDO ?? null;
 				if (volumeDO) {
 					const prevVolumeColorder = volumeDO.getColorder();
 					const prevVolumeDate = volumeDO.getReleaseDateMoment()?.fromNow();
@@ -662,7 +664,7 @@ window.BookSeriesIssueItem = Object.extends({
 				}
 
 			case BookSeriesIssue.LocalVolumeOverdue:
-				return `Vol. ${this.firstUnownedColorder} overdue ${this.bookSeriesDO.getOverdueText()}`;
+				return `Vol. ${this.firstUnavailableSourceColorder} overdue ${this.bookSeriesDO.getOverdueText()}`;
 				
 			case BookSeriesIssue.NoSourceStoreReferences:
 				{
@@ -726,7 +728,9 @@ window.BookSeriesIssueItem = Object.extends({
 				break;
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
-				actions = this.bookSeriesDO.getStoreSearchActions(this.firstUnownedColorder);
+				actions = this.bookSeriesDO.getStoreSearchActions(
+					this.volumeWithIssueColorder ?? this.firstUnavailableSourceColorder
+				);
 				break;
 			case BookSeriesIssue.NoLocalStoreReferences:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.volumeWithIssueDO?.getColorder());
