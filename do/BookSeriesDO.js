@@ -1870,6 +1870,13 @@
 
 					var volumesCOL = parent.getVolumes();
 					newDO.ingestForm($form);
+
+					const existing = volumesCOL.getById( newDO.pkGet() );
+					if (existing) {
+						alert("ERROR: Can't add volume, primary key already exists");
+						throw new Error("Trying to add volume with duplicate primary key");
+					}
+
 					volumesCOL.push(newDO);
 
 					parent.saveVolumesFromCOL(volumesCOL);
