@@ -134,6 +134,9 @@ class AmazonComAsinScraper {
 		if (!$date) { return null; }
 		try {
 			$dp = date_parse_from_format("M d, Y", $date);
+			if (!$dp["day"] || !$dp["month"] || !$dp["year"]) {
+				throw new Exception("Invalid date: $date", 1);
+			}
 			return $dp["day"]."/".$dp["month"]."/".$dp["year"];
 		} catch (Exception $e) {
 			return null;
@@ -219,6 +222,9 @@ class KoboScraper {
 		if (!$date) { return null; }
 		try {
 			$dp = date_parse_from_format("M d, Y", $date);
+			if (!$dp["day"] || !$dp["month"] || !$dp["year"]) {
+				throw new Exception("Invalid date: $date", 1);
+			}
 			return $dp["day"]."/".$dp["month"]."/".$dp["year"];
 		} catch (Exception $e) {
 			return null;

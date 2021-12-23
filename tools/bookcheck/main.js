@@ -597,6 +597,8 @@ window.BookSeriesIssueItem = Object.extends({
 	// For sorting
 	getDateUnix: function() {
 		switch (this.issue) {
+			case BookSeriesIssue.PrintPreorderAwaitingArrival:
+			case BookSeriesIssue.DelayedReleaseForPreorder:
 			case BookSeriesIssue.AwaitingDigitalVersion:
 			case BookSeriesIssue.AwaitingStoreAvailability:
 			case BookSeriesIssue.VolumeAvailable:
@@ -622,6 +624,8 @@ window.BookSeriesIssueItem = Object.extends({
 
 	getDateText: function() {
 		switch (this.issue) {
+			case BookSeriesIssue.PrintPreorderAwaitingArrival:
+			case BookSeriesIssue.DelayedReleaseForPreorder:
 			case BookSeriesIssue.AwaitingDigitalVersion:
 			case BookSeriesIssue.AwaitingStoreAvailability:
 			case BookSeriesIssue.VolumeAvailable:
@@ -709,6 +713,8 @@ window.BookSeriesIssueItem = Object.extends({
 		let lastActionsLength = 0;
 
 		switch (this.issue) {
+			case BookSeriesIssue.PrintPreorderAwaitingArrival:
+			case BookSeriesIssue.DelayedReleaseForPreorder:
 			case BookSeriesIssue.AwaitingDigitalVersion:
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
@@ -831,46 +837,75 @@ window.BookSeriesIssueItem = Object.extends({
 		}
 
 		if (this.bookSeriesDO.canResolveIssueWithVolumeStatus(this.issue)) {
-			actions.push({
-				label: "Set volume status",
-				icon: "icon-chevron-right",
-				callback: () => {
-					try {
-						const legend = Object.keys(BookSeriesVolumeDO.Enum.Status)
-							.map(x => `${x} = ${BookSeriesVolumeDO.Enum.Status[x]}`)
-							.join(", ")
-							;
-						const status = prompt("Status to resolve:\n"+legend);
-						if (!status) { return; }
-						this.bookSeriesDO.resolveIssueWithVolumeStatus(this.issue, status);
-						this.save();
-					} catch(err) {
-						alert(err.message);
-					}
-					
+			
+			const nextStatuses = this.firstUnownedVolume.getNextStatusesForIssueTracker(this.issue);
+			if (nextStatuses?.length) {
+				for (var i = 0; i < nextStatuses.length; i++) {
+					const nextStatus = nextStatuses[i];
+					const nextStatusId = nextStatus[0];
+					const nextStatusLabel = nextStatus[1];
+					actions.push({
+						label: "Set "+nextStatusLabel,
+						icon: "icon-chevron-right",
+						callback: () => {
+							try {
+								this.bookSeriesDO.resolveIssueWithVolumeStatus(this.issue, nextStatusId);
+								this.save();
+							} catch(err) {
+								alert(err.message);
+							}
+							
+						}
+					});
 				}
-			});
+			}
 		}
 
 		actions.push({
-				label: "Set series status",
-				icon: "icon-chevron-right",
-				callback: () => {
-					try {
-						const legend = Object.keys(BookSeriesDO.Enum.Status)
-							.map(x => `${x} = ${BookSeriesDO.Enum.Status[x]}`)
-							.join(", ")
-							;
-						const status = prompt("Status to resolve:\n"+legend);
-						if (!status) { return; }
-						this.bookSeriesDO.setStatus(status);
+			label: "Set volume status",
+			icon: "icon-chevron-right",
+			callback: () => {
+				try {
+					const legend = Object.keys(BookSeriesVolumeDO.Enum.Status)
+						.map(x => `${x} = ${BookSeriesVolumeDO.Enum.Status[x]}`)
+						.join(", ")
+						;
+					const status = prompt("Status to resolve:\n"+legend);
+					if (!status) { return; }
+					if (this.bookSeriesDO.canResolveIssueWithVolumeStatus(this.issue)) {
+						this.bookSeriesDO.resolveIssueWithVolumeStatus(this.issue, status);
 						this.save();
-					} catch(err) {
-						alert(err.message);
+					} else {
+						this.volumeWithIssueDO.setStatus(status);
+						this.volumeWithIssueDO.parent.saveUpdatedVolume(this.volumeWithIssueDO, true);
+						this.save();
 					}
-					
+				} catch(err) {
+					alert(err.message);
 				}
-			});
+				
+			}
+		});
+
+		actions.push({
+			label: "Set series status",
+			icon: "icon-chevron-right",
+			callback: () => {
+				try {
+					const legend = Object.keys(BookSeriesDO.Enum.Status)
+						.map(x => `${x} = ${BookSeriesDO.Enum.Status[x]}`)
+						.join(", ")
+						;
+					const status = prompt("Status to resolve:\n"+legend);
+					if (!status) { return; }
+					this.bookSeriesDO.setStatus(status);
+					this.save();
+				} catch(err) {
+					alert(err.message);
+				}
+				
+			}
+		});
 
 		if (this.bookSeriesDO.canResolveIssueWithReleaseDate(this.issue)) {
 			actions.push({
@@ -892,17 +927,39 @@ window.BookSeriesIssueItem = Object.extends({
 					
 				}
 			});
+		} else if (this.volumeWithIssueDO && this.volumeWithIssueDO.getReleaseDate()) {
+			actions.push({
+				label: "Change release date",
+				icon: "icon-calendar",
+				callback: () => {
+					try {
+						const releaseDate = prompt(
+							"New release date (DD/MM/YYYY):"
+							+"\nCurrent one is: " + this.volumeWithIssueDO.getReleaseDate()
+						);
+						if (!releaseDate) { return; }
+						if (!releaseDate.match(/^[\d]{1,2}\/[\d]{1,2}\/[\d]{4}$/)) {
+							alert('Invalid date format');
+							return;
+						}
+						this.volumeWithIssueDO.setReleaseDate(releaseDate);
+						this.volumeWithIssueDO.parent.saveUpdatedVolume(this.volumeWithIssueDO, true);
+						this.save();
+						console.log("saved", releaseDate);
+					} catch(err) {
+						alert(err.message);
+					}
+					
+				}
+			});
 		}
+
+
 
 		if (actions.length > lastActionsLength) {
 			lastActionsLength = actions.length;
 			actions.push({ divider: true });
 		}
-		actions.push({ divider: true });
-		actions.push({ divider: true });
-		actions.push({ divider: true });
-		actions.push({ divider: true });
-		actions.push({ divider: true });
 
 		actions.push({
 			label: "Edit notes",
@@ -1082,6 +1139,8 @@ window.bookSeriesAjaxInterface = Object.extends({
 			const $issues = jQuery("#issues-app").empty();
 			const existingIssueTypesUnsorted = Object.keys(issuesSorted).map(x => parseInt(x));
 			const existingIssueTypes = [
+				BookSeriesIssue.DelayedReleaseForPreorder,
+				BookSeriesIssue.PrintPreorderAwaitingArrival,
 				BookSeriesIssue.MissingInformation,
 				BookSeriesIssue.VolumeAvailable,
 				BookSeriesIssue.PreorderAvailable,

@@ -294,6 +294,8 @@
 		NoLocalStoreReferences: 10,
 		NoSourceStoreReferences: 11,
 		CancelledAtSource: 12,
+		DelayedReleaseForPreorder: 13,
+		PrintPreorderAwaitingArrival: 14,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -310,6 +312,8 @@
 			case BookSeriesIssue.NoLocalStoreReferences: return 'No local store';
 			case BookSeriesIssue.NoSourceStoreReferences: return 'No source store';
 			case BookSeriesIssue.CancelledAtSource: return 'Assumed cancelled at source';
+			case BookSeriesIssue.DelayedReleaseForPreorder: return 'Delayed release for preorder';
+			case BookSeriesIssue.PrintPreorderAwaitingArrival: return 'Print preorder awaiting arrival';
 			default: return 'Unknown issue';
 		}
 	}
@@ -353,6 +357,7 @@
 			notes: "string",
 			releaseDate: "string", //DD/MM/YYYY
 			releaseDateSource: "string", //DD/MM/YYYY
+			releaseDateHistory: "string", // [{ rd: DD/MM/YYYY, ad: DD/MM/YYYY }]
 			imageAsin: "string",
 			sourceAsin: "string",
 			link: "string",
@@ -373,24 +378,6 @@
 			dontCheckForDelays: "boolean",
 		},
 		extraPrototype: {
-
-			getUniqueId: function () {
-				return this.parent?.getName()
-					+"_"+this.getColorder()
-					+"_"+this.getBestAsinForLink()
-					+"_"+this.getKoboId()
-					;
-			},
-
-			isManualPhysKindleCheckOnly: function() {
-				return this.get("manualPhysKindleCheckOnly", false, "boolean")
-					|| this.get("manualTpbKindleCheckOnly", false, "boolean")
-					;
-			},
-			deleteManualPhysKindleCheckOnly: function(){
-				this.delete("manualPhysKindleCheckOnly");
-				this.delete("manualTpbKindleCheckOnly");
-			},
 
 			__construct: function(rawdata, parent, options){
 				if (typeof rawdata === "string") {
@@ -440,6 +427,65 @@
 				});
 
 				this.nextVolumeDO = this.options.nextVolumeDO;
+			},
+
+
+
+			getUniqueId: function () {
+				return this.parent?.getName()
+					+"_"+this.getColorder()
+					+"_"+this.getBestAsinForLink()
+					+"_"+this.getKoboId()
+					;
+			},
+
+			isManualPhysKindleCheckOnly: function() {
+				return this.get("manualPhysKindleCheckOnly", false, "boolean")
+					|| this.get("manualTpbKindleCheckOnly", false, "boolean")
+					;
+			},
+			deleteManualPhysKindleCheckOnly: function(){
+				this.delete("manualPhysKindleCheckOnly");
+				this.delete("manualTpbKindleCheckOnly");
+			},
+
+
+			processReleaseDateHistory: function(){
+				try {
+					const currentReleaseDate = this.getReleaseDateMoment().format("DD/MM/YYYY");
+					const latestInHistory = this.getReleaseDateHistoryLatest();
+
+					if (currentReleaseDate && (!latestInHistory || latestInHistory !== currentReleaseDate)) {
+						const now = moment().format("DD/MM/YYYY");
+						this.addToReleaseDateHistory(currentReleaseDate, now);
+					}
+				} catch(e) {
+					// pass
+				}
+			},
+			addToReleaseDateHistory: function(releaseDateDDMMYYYY, addedDateDDMMYYYY) {
+				const h = this.getReleaseDateHistoryParsed();
+				h.push({ rd: releaseDateDDMMYYYY, ad: addedDateDDMMYYYY });
+				this.setReleaseDateHistory( JSON.stringify(h) );
+			},
+			getReleaseDateHistoryLatest: function(){
+				const h = this.getReleaseDateHistoryParsed();
+				if (!h?.length) { return null; }
+				return h[h.length-1].rd;
+			},
+			getReleaseDateHistoryParsed: function(){
+				try {
+					const rdh = this.getReleaseDateHistory();
+					if (!rdh) { throw new Error("No data"); }
+					return JSON.parse(rdh);
+				} catch (e) {
+					return [];
+				}
+			},
+			getReleaseDateHistoryAsString: function(){
+				const h = this.getReleaseDateHistoryParsed();
+				if (!h?.length) { return "(No history)"; }
+				return h.map(x => `Releasing ${x.rd}, added on ${x.ad}`).join("\n");
 			},
 
 			isOwned: function() {
@@ -521,8 +567,6 @@
 				if (!bwjpid) { return null; }
 				return "https://bookwalker.jp/"+bwjpid;
 			},
-
-
 
 			isLastVolumeOfCollection: function(){
 				return (this.options.index >= (this.options.total-1));
@@ -815,7 +859,10 @@
 					w: w,
 					maxage: 60*60*24*7
 				};
-				if (refresh) { params.refresh = 1; params.t = Date.now(); }
+				if (refresh) {
+					params.refreshurl = 1;
+					params.t = Date.now();
+				}
 
 				return "thumb?"+jQuery.param(params);
 			},
@@ -1013,6 +1060,102 @@
 				}
 			},
 
+
+			getNextStatuses: function() {
+
+				var statuses = [];
+
+				var addStatus = function(id, label) {
+					statuses.push([id, label]);
+				}
+
+				var status = this.getStatus();
+
+
+				switch(status) {
+					default: break;
+					case this.__static.Enum.Status.Read:
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						break;
+					case this.__static.Enum.Status.Backlog:
+						addStatus(this.__static.Enum.Status.Read, "read");
+						break;
+					case this.__static.Enum.Status.Preorder:
+						addStatus(this.__static.Enum.Status.Available, "available");
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						addStatus(this.__static.Enum.Status.Read, "read");
+						break;
+					case this.__static.Enum.Status.StoreWait:
+						addStatus(this.__static.Enum.Status.Available, "available");
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						addStatus(this.__static.Enum.Status.Read, "read");
+						break;
+					case this.__static.Enum.Status.None:
+						addStatus(this.__static.Enum.Status.Source, "source");
+					case this.__static.Enum.Status.Source:
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						addStatus(this.__static.Enum.Status.Available, "available");
+						addStatus(this.__static.Enum.Status.Phys, "Phys");
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						addStatus(this.__static.Enum.Status.Read, "read");
+						break;
+					case this.__static.Enum.Status.Phys:
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						addStatus(this.__static.Enum.Status.Available, "available");
+						break;
+					case this.__static.Enum.Status.Available:
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						addStatus(this.__static.Enum.Status.Read, "read");
+						break;
+				}
+
+				return statuses;
+			},
+
+			getNextStatusesForIssueTracker: function(issue) {
+
+				let statuses = [];
+
+				if (!this.parent.canResolveIssueWithVolumeStatus(issue)) {
+					return statuses;
+				}
+
+
+				var addStatus = function(id, label) {
+					statuses.push([id, label]);
+				}
+
+
+				switch (issue) {
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						break;
+					case BookSeriesIssue.AwaitingDigitalVersion:
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						addStatus(this.__static.Enum.Status.Available, "available");
+						addStatus(this.__static.Enum.Status.StoreWait, "store wait");
+						break;
+					case BookSeriesIssue.AwaitingStoreAvailability:
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						addStatus(this.__static.Enum.Status.Available, "available");
+						break;
+					case BookSeriesIssue.VolumeAvailable:
+						addStatus(this.__static.Enum.Status.Backlog, "backlog");
+						break;
+					case BookSeriesIssue.PreorderAvailable:
+						addStatus(this.__static.Enum.Status.Preorder, "preorder");
+						break;
+					default:
+						break;
+				}
+
+				return statuses;
+			},
+
+
 			renderTile: function(options) {
 				options = populateDefaultOptions(options, {
 					container: '<li>',
@@ -1119,9 +1262,9 @@
 					$submenu = $submenu ? $submenu : $dropdown;
 					return $submenu.appendR('<li>').appendR('<a>');
 				}
-				var addSubmenu = function(label){
+				var addSubmenu = function(label, $parentMenu){
 					lastWasSeparator = false;
-					var $submenu = $dropdown.appendR('<li class="dropdown-submenu"><a tabindex="-1" href="#">More options</a><ul class="dropdown-menu"></ul></li>');
+					var $submenu = ($parentMenu ? $parentMenu : $dropdown).appendR('<li class="dropdown-submenu"><a tabindex="-1" href="#">More options</a><ul class="dropdown-menu"></ul></li>');
 					$submenu.find("a").text(label);
 					return $submenu.find(".dropdown-menu");
 				}
@@ -1151,43 +1294,12 @@
 
 				var status = this.getStatus();
 
-				switch(status) {
-					default: break;
-					case this.__static.Enum.Status.Read:
-						addSetStatusOption(this.__static.Enum.Status.Backlog, "backlog");
-						break;
-					case this.__static.Enum.Status.Backlog:
-						addSetStatusOption(this.__static.Enum.Status.Read, "read");
-						break;
-					case this.__static.Enum.Status.Preorder:
-						addSetStatusOption(this.__static.Enum.Status.Available, "available");
-						addSetStatusOption(this.__static.Enum.Status.Backlog, "backlog");
-						addSetStatusOption(this.__static.Enum.Status.Read, "read");
-						break;
-					case this.__static.Enum.Status.StoreWait:
-						addSetStatusOption(this.__static.Enum.Status.Available, "available");
-						addSetStatusOption(this.__static.Enum.Status.Preorder, "preorder");
-						addSetStatusOption(this.__static.Enum.Status.Backlog, "backlog");
-						addSetStatusOption(this.__static.Enum.Status.Read, "read");
-						break;
-					case this.__static.Enum.Status.None:
-						addSetStatusOption(this.__static.Enum.Status.Source, "source");
-					case this.__static.Enum.Status.Source:
-						addSetStatusOption(this.__static.Enum.Status.Preorder, "preorder");
-						addSetStatusOption(this.__static.Enum.Status.Available, "available");
-						addSetStatusOption(this.__static.Enum.Status.Phys, "Phys");
-						addSetStatusOption(this.__static.Enum.Status.Backlog, "backlog");
-						addSetStatusOption(this.__static.Enum.Status.Read, "read");
-						break;
-					case this.__static.Enum.Status.Phys:
-						addSetStatusOption(this.__static.Enum.Status.Preorder, "preorder");
-						addSetStatusOption(this.__static.Enum.Status.Available, "available");
-						break;
-					case this.__static.Enum.Status.Available:
-						addSetStatusOption(this.__static.Enum.Status.Preorder, "preorder");
-						addSetStatusOption(this.__static.Enum.Status.Backlog, "backlog");
-						addSetStatusOption(this.__static.Enum.Status.Read, "read");
-						break;
+				const nextStatuses = this.getNextStatuses();
+				for (var i = 0; i < nextStatuses.length; i++) {
+					const item = nextStatuses[i];
+					const id = item[0];
+					const label = item[1];
+					addSetStatusOption(id, label);
 				}
 
 
@@ -1379,56 +1491,6 @@
 				}
 
 
-				var link = this.getLink();
-				var slink = this.parent.getSeriesLink();
-				var slinksrc = this.parent.getKindleSearchLinkSource();
-				var koboslink = this.parent.getKoboSearchLink();
-				var anySeriesLinkShown = false;
-
-
-				if (link) {
-					var title = this.getLinkTitle();
-					title = title ? title : "Link";
-					addOption().html('<i class="icon-info-sign"></i> '+title).attr({
-						href: link,
-						target: "_blank"
-					});
-					anySeriesLinkShown = true;
-				}
-
-				if (isKoboSeries) {
-					addOption().html('<i class="icon-info-sign"></i> Search series on Kobo').attr({
-						href: koboslink,
-						target: "_blank"
-					});
-					anySeriesLinkShown = true;
-				}
-
-				if (slink) {
-					addOption().html('<i class="icon-info-sign"></i> Search series on Amazon').attr({
-						href: slink,
-						target: "_blank"
-					});
-					anySeriesLinkShown = true;
-				}
-
-				if (slinksrc) {
-					addOption().html('<i class="icon-info-sign"></i> Search series on Amazon JP').attr({
-						href: slinksrc,
-						target: "_blank"
-					});
-					anySeriesLinkShown = true;
-				}
-
-				if (this.parent.canShowPublicationGraph()) {
-					addOption().html('<i class="icon-signal"></i> Publication graph').click(this.parent.showPublicationGraph.bind(this.parent));
-					anySeriesLinkShown = true;
-				}
-
-				if (anySeriesLinkShown) {
-					addSeparator();
-				}
-
 
 
 
@@ -1440,9 +1502,9 @@
 					this.__static.Enum.Status.Phys,
 					].includes(status)) {
 
-					const $delaySubmenu = addSubmenu("Delay");
+					const $delaySubmenu = addSubmenu("Delay options");
 					
-					const addDelayOption = function(units, unitName, _delayedMoment){
+					const addDelayOption = function(units, unitName, _delayedMoment, $parentMenu){
 						let name;
 						if (units && unitName) {
 							_delayedMoment = moment(_releaseDate).add(units, unitName);
@@ -1463,20 +1525,14 @@
 							return;
 						}
 						
-						return addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> '+name).click(function(){
+						return addOption($parentMenu ? $parentMenu : $delaySubmenu).html('<i class="icon-chevron-right"></i> '+name).click(function(){
 							this.setReleaseDateMoment(_delayedMoment);
 							this.save();
 						}.bind(this));
 					}.bind(this);
 
-					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input date').click(function(){
-						const def = _releaseDate.format("DD/MM/YYYY");
-						const value = prompt("Enter new release date (DD/MM/YYYY)", def);
-						if (!value || value === def) { return; }
-						this.setReleaseDate(value);
-						this.save();
-					}.bind(this));
-					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input interval').click(function(){
+					
+					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input delay interval').click(function(){
 						const value = prompt("Enter interval (6 weeks, -2 months, 5 years)");
 						if (!value) { return; }
 						const split = value.replace(/\s+/, " ").split(" ");
@@ -1490,18 +1546,60 @@
 						this.setReleaseDateMoment(_target);
 						this.save();
 					}.bind(this));
+					
 					addSeparator($delaySubmenu);
+					
 					addDelayOption(1, 'week');
 					addDelayOption(2, 'weeks');
 					addDelayOption(3, 'weeks');
 					addDelayOption(4, 'weeks');
 					addDelayOption(5, 'weeks');
+
 					addSeparator($delaySubmenu);
-					addDelayOption(1, 'month');
-					addDelayOption(2, 'months');
-					addDelayOption(3, 'months');
-					addSeparator($delaySubmenu);
-					addDelayOption(1, 'year');
+
+					addOption($delaySubmenu).html('<i class="icon-calendar"></i> View release date history').click(function(){
+						alert(this.getReleaseDateHistoryAsString());
+					}.bind(this));
+
+					const $moreSubmenu = addSubmenu("More", $delaySubmenu);
+
+					addDelayOption(1, 'month', null, $moreSubmenu);
+					addDelayOption(2, 'months', null, $moreSubmenu);
+					addDelayOption(3, 'months', null, $moreSubmenu);
+					addDelayOption(6, 'months', null, $moreSubmenu);
+					addDelayOption(1, 'year', null, $moreSubmenu);
+
+					addSeparator($moreSubmenu);
+
+					addOption($moreSubmenu).html('<i class="icon-chevron-right"></i> Input delay date').click(function(){
+						const def = _releaseDate.format("DD/MM/YYYY");
+						const value = prompt("Enter new release date (DD/MM/YYYY)", def);
+						if (!value || value === def) { return; }
+						this.setReleaseDate(value);
+						this.save();
+					}.bind(this));
+
+					addSeparator($moreSubmenu);
+
+					addOption($moreSubmenu).html('<i class="icon-wrench"></i> Edit release date history').click(function(){
+						const jh = this.getReleaseDateHistory();
+						const jhr = prompt("Edit the release date JSON:", jh);
+						if (!jhr || jhr === jh) { return; }
+						try {
+							JSON.parse(jhr);
+						} catch {
+							alert("Invalid JSON, save aborted");
+							return;
+						}
+						this.setReleaseDateHistory(jhr);
+						this.save();
+					}.bind(this));
+
+					addOption($moreSubmenu).html('<i class="icon-remove"></i> Clear release date history').click(function(){
+						if (!confirm("Are you sure you want to clear the release date history for this volume?")) { return; }
+						this.setReleaseDateHistory("");
+						this.save();
+					}.bind(this));
 					
 
 				}
@@ -1514,13 +1612,13 @@
 				const largeCoverSource = this.getLargeCoverUrlSource();
 
 				if (largeCover) {
-					addOption($coverSubmenu).html('<i class="icon-picture"></i> Large cover').click(() => {
+					addOption($coverSubmenu).html('<i class="icon-picture"></i> Open large cover').click(() => {
 						window.open(largeCover, "_blank");
 					});
 					anyLargeCoverLinksShown = true;
 				}
 				if (largeCoverSource) {
-					addOption($coverSubmenu).html('<i class="icon-picture"></i> Large cover source').click(() => {
+					addOption($coverSubmenu).html('<i class="icon-picture"></i> Open source large cover').click(() => {
 						window.open(largeCoverSource, "_blank");
 					});
 					anyLargeCoverLinksShown = true;
@@ -1554,14 +1652,65 @@
 					}.bind(this));
 				}
 
-				addSeparator();
 
-				addOption().html('<i class="icon-eye-close"></i> Hide').click(function(){
+
+				var link = this.getLink();
+				var slink = this.parent.getSeriesLink();
+				var slinksrc = this.parent.getKindleSearchLinkSource();
+				var koboslink = this.parent.getKoboSearchLink();
+				var anySeriesLinkShown = false;
+
+				const $moreSubmenu = addSubmenu("More");
+
+
+				if (link) {
+					var title = this.getLinkTitle();
+					title = title ? title : "Link";
+					addOption($moreSubmenu).html('<i class="icon-info-sign"></i> '+title).attr({
+						href: link,
+						target: "_blank"
+					});
+					anySeriesLinkShown = true;
+				}
+
+				if (isKoboSeries) {
+					addOption($moreSubmenu).html('<i class="icon-info-sign"></i> Search series on Kobo').attr({
+						href: koboslink,
+						target: "_blank"
+					});
+					anySeriesLinkShown = true;
+				}
+
+				if (slink) {
+					addOption($moreSubmenu).html('<i class="icon-info-sign"></i> Search series on Amazon').attr({
+						href: slink,
+						target: "_blank"
+					});
+					anySeriesLinkShown = true;
+				}
+
+				if (slinksrc) {
+					addOption($moreSubmenu).html('<i class="icon-info-sign"></i> Search series on Amazon JP').attr({
+						href: slinksrc,
+						target: "_blank"
+					});
+					anySeriesLinkShown = true;
+				}
+
+				if (this.parent.canShowPublicationGraph()) {
+					if (anySeriesLinkShown) {
+						addSeparator($moreSubmenu);
+					}
+					addOption($moreSubmenu).html('<i class="icon-signal"></i> Publication graph').click(this.parent.showPublicationGraph.bind(this.parent));
+					anySeriesLinkShown = true;
+				}
+
+				addOption($moreSubmenu).html('<i class="icon-eye-close"></i> Hide').click(function(){
 					$container.hide();
 				}.bind(this));
 
 
-				addOption().html('<i class="icon-pencil"></i> Edit series').click(this.throwParentEditForm.bind(this));
+				addOption($moreSubmenu).html('<i class="icon-pencil"></i> Edit series').click(this.throwParentEditForm.bind(this));
 
 				return $dropdown;
 			},
@@ -1589,6 +1738,8 @@
 					default:
 						break;
 				}
+
+				this.processReleaseDateHistory();
 
 			},
 			save: function(){
@@ -1679,7 +1830,7 @@
 				event: {},
 				typeoptions: {},
 				hideFields: [
-					"ibooksId", "mangaCalendarId", "mangaCalendarEnabled"
+					"releaseDateHistory", "ibooksId", "mangaCalendarId", "mangaCalendarEnabled"
 				]
 			},
 			sortByReleaseDate: function(volumesCOL, reverse) {
@@ -2263,6 +2414,20 @@
 				const seriesStatus = this.getStatus();
 				const store = this.getStore();
 
+				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Preorder && firstUnowned?.getReleaseDateMoment()?.isBefore(moment())) {
+					if (store === BookSeriesDO.Enum.Store.Phys) {
+						return [
+							BookSeriesIssue.PrintPreorderAwaitingArrival,
+							firstUnowned
+						];
+					} else {
+						return [
+							BookSeriesIssue.DelayedReleaseForPreorder,
+							firstUnowned
+						];
+					}
+				}
+
 				if (firstUnowned?.isNoLocalStoreReferences()) {
 					return [
 						BookSeriesIssue.NoLocalStoreReferences,
@@ -2388,6 +2553,8 @@
 			},
 			canResolveIssueWithVolumeStatus: function(issue) {
 				switch(issue) {
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
 					case BookSeriesIssue.AwaitingStoreAvailability:
@@ -2406,10 +2573,10 @@
 			},
 			canResolveIssueWithKoboId: function(issue) {
 				switch(issue) {
-					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
 					case BookSeriesIssue.NoLocalStoreReferences:
+					case BookSeriesIssue.AwaitingDigitalVersion:
 						return true;
 					case BookSeriesIssue.AwaitingStoreAvailability:
 						return (this.getStore() === BookSeriesDO.Enum.Store.Kobo);
@@ -2507,6 +2674,8 @@
 							status: BookSeriesVolumeDO.Enum.Status.Source,
 						});
 						break;
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
 						throw new Error("Can't resolve this issue with an ASIN");
@@ -2554,6 +2723,8 @@
 							this.saveUpdatedVolume(volumeDO, true);
 						}
 						break;
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
 					case BookSeriesIssue.VolumeAvailable:
@@ -2573,6 +2744,8 @@
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
 						throw new Error("Can't resolve this issue with a status");
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
 					case BookSeriesIssue.AwaitingStoreAvailability:
@@ -2600,6 +2773,8 @@
 							status: BookSeriesVolumeDO.Enum.Status.Source,
 						});
 						break;
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.AwaitingStoreAvailability:
 					case BookSeriesIssue.VolumeAvailable:
@@ -3780,9 +3955,14 @@
 						.text("Check delays")
 						;
 					addOption()
+						.attr("href", "./customajax_delaychecker.php?debug=1&mode=wide")
+						.attr("target", "_blank")
+						.text("Check delays (wide)")
+						;
+					addOption()
 						.attr("href", "./customajax_delaychecker.php?debug=1&apply=1")
 						.attr("target", "_blank")
-						.text("Apply delays")
+						.text("Apply delays (not implemented)")
 						;
 				}
 			},
