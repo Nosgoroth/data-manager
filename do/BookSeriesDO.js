@@ -324,22 +324,67 @@
 		name: "BookSeries",
 		types: {
 			name: "string",
-			link: "string"
+			link: "string",
+			iconUrl: "string",
 		},
 		extraStatic: { primaryKey: "name" }
 	});
 	window.bookPublisherCOL = BookPublisherDO.COL([
-		{ name: "Yen Press", link: "https://twitter.com/YenPress" },
-		{ name: "VIZ", link: "https://twitter.com/VIZMedia" },
-		{ name: "Kodansha", link: "https://twitter.com/KodanshaUSA" },
-		{ name: "JNC", link: "https://twitter.com/jnovelclub" },
-		{ name: "Kadokawa", link: null },
-		{ name: "Seven Seas", link: "https://twitter.com/gomanga" },
-		{ name: "Other", link: null },
-		{ name: "Sol Press", link: "https://twitter.com/SolPressUSA" },
-		{ name: "Vertical", link: "https://twitter.com/vertical_staff" },
-		{ name: "Tentai", link: "https://twitter.com/tentaibooks" },
-		{ name: "CIW", link: "https://twitter.com/crossinfworld" },
+		{
+			name: "Yen Press",
+			link: "https://twitter.com/YenPress",
+			iconUrl: "https://dhjhkxawhe8q4.cloudfront.net/yenpress-wp/wp-content/uploads/2018/12/11131202/android-icon-192x192.png"
+		},
+		{
+			name: "VIZ",
+			link: "https://twitter.com/VIZMedia",
+			iconUrl: "https://www.viz.com/favicon/apple-touch-icon.png"
+		},
+		{
+			name: "Kodansha",
+			link: "https://twitter.com/KodanshaUSA",
+			iconUrl: "https://kodansha.us/favicon-32x32.png"
+		},
+		{
+			name: "JNC",
+			link: "https://twitter.com/jnovelclub",
+			iconUrl: "https://j-novel.club/apple-touch-icon.png"
+		},
+		{
+			name: "Kadokawa",
+			link: "https://product.kadokawa.co.jp/digipub/",
+			iconUrl: "https://www.kadokawa.co.jp/apple-touch-icon.png"
+		},
+		{
+			name: "Seven Seas",
+			link: "https://twitter.com/gomanga",
+			iconUrl: "https://sevenseasentertainment.com/wp-content/uploads/2017/04/cropped-SS-1-180x180.jpg"
+		},
+		{
+			name: "Other",
+			link: null,
+			iconUrl: "https://i.imgur.com/UoMR7Yl.jpeg"
+		},
+		{
+			name: "Sol Press",
+			link: "https://twitter.com/SolPressUSA",
+			iconUrl: "https://pbs.twimg.com/profile_images/839237563864899584/wycVM8CR_400x400.jpg"
+		},
+		{
+			name: "Vertical",
+			link: "https://twitter.com/vertical_staff",
+			iconUrl: "http://www.vertical-inc.com/favicon.ico"
+		},
+		{
+			name: "Tentai",
+			link: "https://twitter.com/tentaibooks",
+			iconUrl: "https://tentaibooks.com/wp-content/uploads/2020/04/cropped-favicon-website-32x32.jpg"
+		},
+		{
+			name: "CIW", 
+			link: "https://twitter.com/crossinfworld",
+			iconUrl: "http://www.crossinfworld.com/img/chibi.png"
+		},
 	]);
 
 
@@ -3935,25 +3980,25 @@
 					.text("BookCheck")
 					;
 
-				const $ddm = $topRow.appendR('<div class="btn-group"><button class="btn dropdown-toggle" data-toggle="dropdown">More <span class="caret"></span></button><ul class="dropdown-menu pull-right"></ul></div>').find(".dropdown-menu");
-				let _addSeparatorNext = false;
-				const addOption = function(){
-					if (_addSeparatorNext) {
-						actuallyAddSeparator();
-						_addSeparatorNext = false;
-					}
-					return $ddm.appendR('<li>').appendR('<a>');
-				}
-				const addSeparator = function(){ _addSeparatorNext = true; }
-				const actuallyAddSeparator = function(){ return $ddm.appendR('<li>').addClass('divider'); }
-
-				addOption()
-					.attr("href", "./tools/bookstats/")
-					.attr("target", "_blank")
-					.text("Stats")
-					;
-
 				if (window._customAjaxAvailable?.includes?.("customajax_delaychecker.php")) {
+
+					const $ddm = $topRow.appendR('<div class="btn-group"><button class="btn dropdown-toggle" data-toggle="dropdown">More <span class="caret"></span></button><ul class="dropdown-menu pull-right"></ul></div>').find(".dropdown-menu");
+					let _addSeparatorNext = false;
+					const addOption = function(){
+						if (_addSeparatorNext) {
+							actuallyAddSeparator();
+							_addSeparatorNext = false;
+						}
+						return $ddm.appendR('<li>').appendR('<a>');
+					}
+					const addSeparator = function(){ _addSeparatorNext = true; }
+					const actuallyAddSeparator = function(){ return $ddm.appendR('<li>').addClass('divider'); }
+
+					addOption()
+						.attr("href", "./tools/bookstats/")
+						.attr("target", "_blank")
+						.text("Stats")
+						;
 
 					addSeparator();
 					addOption()
@@ -3971,6 +4016,14 @@
 						.attr("target", "_blank")
 						.text("Apply delays (not implemented)")
 						;
+				} else {
+
+					$topRow.appendR('<a class="btn">')
+						.attr("href", "./tools/bookstats/")
+						.attr("target", "_blank")
+						.text("Stats")
+						;
+
 				}
 			},
 

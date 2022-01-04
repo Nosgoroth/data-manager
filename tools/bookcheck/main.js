@@ -16,6 +16,13 @@ window.VolumePhysHandler = Object.extends({
 
 	__construct: function(volumeDO){
 		this.volumeDO = volumeDO;
+		try {
+			const pubIndex = volumeDO.parent.getPublisher();
+			const pubDO = window.bookPublisherCOL.getByIndex(pubIndex - 1);
+			this.pubIconUrl = pubDO.getIconUrl();
+		} catch (error) {
+			
+		}
 	},
 
 	isEligiblePhys: function() {
@@ -39,6 +46,9 @@ window.VolumePhysHandler = Object.extends({
 		const asin = this.volumeDO.getAsin();
 		const $li = jQuery('<li>');
 		$li.appendR('<span class="title">')
+			.appendR('<span class="icon">')
+				.css('background-image', 'url(\''+this.pubIconUrl+'\')')
+			.parent()
 			.appendR('<a class="name">')
 		    	.attr("href", "https://smile.amazon.com/dp/"+asin)
 		    	.attr("target", "_blank")
@@ -462,6 +472,8 @@ window.BookSeriesIssueItem = Object.extends({
 		this.volumeWithIssueDO = volumeWithIssueDO;
 		this.volumeWithIssueColorder = volumeWithIssueDO?.getColorder();
 
+		this.bookPublisherDO = window.bookPublisherCOL.getByIndex(bookSeriesDO.getPublisher() - 1);
+
 		const volumesCOL = this.bookSeriesDO.getVolumes();
 
 		this.lastVolume = volumesCOL[volumesCOL.length - 1];
@@ -494,10 +506,11 @@ window.BookSeriesIssueItem = Object.extends({
 			.attr("data-issuetype", this.issue)
 			;
 
-		$li
-			;
 		$li.appendR('<span class="title">')
-			.appendR('<span class="title">')
+			.appendR('<span class="icon">')
+				.css('background-image', 'url(\''+this.bookPublisherDO.getIconUrl()+'\')')
+			.parent()
+			.appendR('<span class="text">')
 				.text(this.bookSeriesDO.getName())
 			.parent()
 			.appendR('<span class="date">')

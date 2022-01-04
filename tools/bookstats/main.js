@@ -382,6 +382,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 
 			const boughtReadThisYearDiff = boughtThisYear - readThisYear;
 			const boughtReadThisYearPercentage = Math.round(100 * readThisYear / boughtThisYear);
+			
 
 			const boughtReadLastYearDiff = boughtLastYear - readLastYear;
 			const boughtReadLastYearPercentage = Math.round(100 * readLastYear / boughtLastYear);
@@ -396,11 +397,26 @@ window.bookSeriesAjaxInterface = Object.extends({
 					`You read <strong>${readThisYear}</strong> books in ${thisYear}, which is <strong>${Math.abs(readDiff)} ${readDiff > 0 ? 'more' : 'fewer'}</strong> than last year.`
 				)
 				;
-			$parent.appendR('<p>')
-				.html(
-					`You read <strong>${boughtReadThisYearPercentage}%</strong> as many books as you bought this year. Last year it was ${boughtReadLastYearPercentage}%.`
-				)
-				;
+
+			let percComparisonText = '';
+			if (boughtThisYear) {
+				percComparisonText += `You read <strong>${boughtReadThisYearPercentage}%</strong> as many books as you bought this year. `;
+			}
+			if (!boughtLastYear) {
+				if (!boughtThisYear) {
+					percComparisonText += `You haven't bought any books this year, same as last year.`;
+				} else {
+					percComparisonText += `Last year you didn't buy any.`;
+				}
+			} else {
+				if (!boughtThisYear) {
+					percComparisonText += `You haven't bought any books this year, but last year you read ${boughtReadLastYearPercentage}% as many books as you bought.`;
+				} else {
+					percComparisonText += `Last year it was ${boughtReadLastYearPercentage}%.`;
+				}
+			}
+			$parent.appendR('<p>').html(percComparisonText);
+
 		}
 
 		{
