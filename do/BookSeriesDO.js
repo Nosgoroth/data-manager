@@ -1255,8 +1255,16 @@
 					default: break;
 				}
 
+				if (this._tileNote) {
+					$dataContent.appendR('<p class="tileNote">').text(this._tileNote);
+				}
+
 				if (notes) {
 					$dataContent.appendR('<p class="notes">').text(notes);
+				}
+
+				if (this._scoreDisplay) {
+					$dataContent.appendR('<p class="scoreDisplay">').text(`[${ this._scoreDisplay }]`);
 				}
 
 				let dateMoment;
@@ -3012,6 +3020,18 @@
 				return pubGraphData.nextjp_uncorrected;
 			},
 
+			isOverdue: function() {
+				const dueTime = this.getNextVolumeExpectedDateUncorrected();
+				if (!dueTime) { return false; }
+				return !!dueTime.isBefore();
+			},
+
+			isSourceOverdue: function() {
+				const dueTime = this.getNextSourceVolumeExpectedDateUncorrected();
+				if (!dueTime) { return false; }
+				return !!dueTime.isBefore();
+			},
+
 			getOverdueText: function() {
 				const dueTime = this.getNextVolumeExpectedDateUncorrected();
 				if (!dueTime) { return ''; }
@@ -3936,6 +3956,109 @@
 				this.$container.empty().append($container);
 			},
 
+			_tileRenderFindNext: function(){
+
+				var BSEnumStatus = BookSeriesDO.Enum.Status;
+				var BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+
+				const $container = jQuery('<div class="bookSeriesTiles">');
+
+				let volumesCOL = [];
+				this._COL.forEach(function(bookSeriesDO){
+
+					if ([
+						BSEnumStatus.Consider,
+						BSEnumStatus.Drop,
+					].includes(bookSeriesDO.getStatus())) {
+						return;
+					}
+
+					const seriesVolumesCOL = bookSeriesDO.getVolumes();
+					const unreadVolumesCOL = seriesVolumesCOL.filter(x => x.getStatus() === BSVEnumStatus.Backlog);
+
+					if (unreadVolumesCOL.length === 0) { return; }
+
+					const unreadOrAvailVolumesCOL = seriesVolumesCOL.filter(x => {
+						return [
+							BSVEnumStatus.Backlog,
+							BSVEnumStatus.Available,
+						].includes(x.getStatus());
+					});
+					const preorderVolumesCOL = seriesVolumesCOL.filter(x => {
+						return [
+							BSVEnumStatus.Preorder,
+						].includes(x.getStatus());
+					});
+
+					const volumeDO = unreadVolumesCOL[0];
+					const latestOwned = unreadVolumesCOL[unreadVolumesCOL.length - 1];
+
+					const c = {
+						unread: unreadVolumesCOL.length,
+						plusUnread: unreadVolumesCOL.length - 1,
+						unreadOrAvail: unreadOrAvailVolumesCOL.length,
+						avail: unreadOrAvailVolumesCOL.length - unreadVolumesCOL.length,
+						preorder: preorderVolumesCOL.length,
+						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
+						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
+						timeSinceLatest: moment().diff(latestOwned.getBestReleaseDateMoment(), 'months', true),
+					};
+
+					const notes = [];
+
+					if (c.plusUnread > 0) {
+						notes.push(c.plusUnread + " more");
+					}
+					if (c.avail > 0) {
+						notes.push(c.avail + " available");
+					}
+					if (c.preorder > 0) {
+						notes.push(c.preorder + " preordered");
+					}
+
+					let note = null;
+					if (notes.length) {
+						note = "Plus " + notes.join(", ")
+					}
+
+					const score = (
+						+ (bookSeriesDO.isHighlight() ? 3 : 0) // Bonus if series is a highlight
+						+ (volumeDO.getColorder() === 1 ? 1 : 0) // Extra for volume ones
+						+ (2 * c.preorder) // Active preorders means you should get up to date
+						+ (0.5 * c.plusUnread) // Smaller bonus for accumulated series
+						- (1 * c.avail) // Negative bonus if you haven't been buying the latest releases
+						- (1 * c.timeSince) // The longer you've let it sit, the less likely you are to want to get back to it
+						+ (c.timeSince < 0.25 ? 2 : 0) // Bonus for latest volume released in last week
+					);
+
+					volumeDO._tileNote = note;
+					volumeDO._scoreDisplay = Math.floor(score*100)/100;
+
+					volumeDO._score = score;
+					volumesCOL.push(volumeDO);
+
+					// console.log(bookSeriesDO.getName(), score, c);
+
+				});
+				volumesCOL = BookSeriesVolumeDO.COL(volumesCOL);
+
+				volumesCOL.sort((a,b) => (b._score - a._score));
+
+				const $backlog = $container.appendR('<div class="bookSeriesTilesBacklog">');
+				$backlog.appendR('<h3>').text("Reading queue");
+				$backlog.appendR('<small>').text("Books to read, sorted by magic score");
+				const $tiles = $backlog.appendR('<ul class="tiles">');
+				
+				volumesCOL.forEach(function(volumeDO){
+					$tiles.appendR(volumeDO.renderTile({
+						dateType: 'read',
+						dateLong: true,
+					}));
+				});
+
+				this.$container.empty().append($container);
+			},
+
 
 			render: function(){
 				var renderMode = this.getExtraValueByKey("rendermode");
@@ -3955,6 +4078,9 @@
 					case "volumetiles_read":
 						this._tileRenderRead();
 						break;
+					case "volumetiles_findnext":
+						this._tileRenderFindNext();
+						break;
 				}
 
 				var $topRow = this.$container.prependR('<div id="topRow">');
@@ -3966,6 +4092,7 @@
 						.append('<option value="volumetiles_upcoming">Upcoming volumes</option>')
 						.append('<option value="volumetiles_backlog">Latest backlog</option>')
 						.append('<option value="volumetiles_read">Latest read</option>')
+						.append('<option value="volumetiles_findnext">Reading queue</option>')
 					.val(renderMode)
 					.on('change', function(){
 						this.setExtraValue("rendermode", $rendermode.val());
