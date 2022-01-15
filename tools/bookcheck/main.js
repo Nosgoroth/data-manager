@@ -501,9 +501,13 @@ window.BookSeriesIssueItem = Object.extends({
 		return getBookSeriesIssueName(this.issue);
 	},
 
-	render: function() {
+	render: function(prevIssue) {
 		const $li = jQuery('<li>')
 			.attr("data-issuetype", this.issue)
+			.toggleClass(
+				"separateFromPrevious",
+				this.shouldHaveSeparator(prevIssue)
+			)
 			;
 
 		$li.appendR('<span class="title">')
@@ -553,6 +557,29 @@ window.BookSeriesIssueItem = Object.extends({
 
 		this.$li = $li;
 		return $li;
+	},
+
+	shouldHaveSeparator: function(prevIssue) {
+		switch (this.issue) {
+			case BookSeriesIssue.WaitingForLocal: {
+				const prev = prevIssue?.bookSeriesDO.getNextVolumeExpectedDate()?.fromNow(true);
+				const curr = this.bookSeriesDO.getNextVolumeExpectedDate()?.fromNow(true);
+				return !!(prevIssue && !prev && curr);
+			}
+			case BookSeriesIssue.LocalVolumeOverdue: {
+				const prev = prevIssue?.bookSeriesDO.isOverdue();
+				const curr = this.bookSeriesDO.isOverdue();
+				return !!(prevIssue && !prev && curr);
+			}
+			case BookSeriesIssue.SourceVolumeOverdue: {
+				const prev = prevIssue?.bookSeriesDO.isSourceOverdue();
+				const curr = this.bookSeriesDO.isSourceOverdue();
+				return !!(prevIssue && !prev && curr);
+			}
+			default: {
+				return false;
+			}
+		}
 	},
 
 	generateButton: function(label, action) {
@@ -1171,8 +1198,10 @@ window.bookSeriesAjaxInterface = Object.extends({
 			for (const issueType of existingIssueTypes) {
 				$issues.appendR('<h4>').text( getBookSeriesIssueName(issueType) );
 				const $ul = $issues.appendR('<ul class="issues">');
+				let prevIssue = null;
 				for (const issue of issuesSorted[issueType]) {
-					issue.render().appendTo($ul);
+					issue.render(prevIssue).appendTo($ul);
+					prevIssue = issue;
 				}
 			}
 
