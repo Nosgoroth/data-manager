@@ -3611,6 +3611,11 @@
 		extraStatic: {
 			primaryKey: "id",
 
+			getConfigValue: function(key, defaultValue) {
+				const x = window._do_configs?.bookseriesdo?.[key];
+				return ((typeof x === "undefined") ? defaultValue : x);
+			},
+
 
 			getStats: function(seriesCOL){
 				var stats = {
@@ -3963,6 +3968,17 @@
 
 				const $container = jQuery('<div class="bookSeriesTiles">');
 
+				const weights = {
+					highlight: 		BookSeriesDO.getConfigValue("readinglist_score_highlight", 3),
+					firstVolume: 	BookSeriesDO.getConfigValue("readinglist_score_firstvolume", 1),
+					preorder: 		BookSeriesDO.getConfigValue("readinglist_weight_preorder", 2),
+					extraUnread: 	BookSeriesDO.getConfigValue("readinglist_weight_extraunread", 0.5),
+					available: 		BookSeriesDO.getConfigValue("readinglist_weight_available", -1),
+					monthsSince: 	BookSeriesDO.getConfigValue("readinglist_weight_monthssince", -1),
+					recentMonths: 	BookSeriesDO.getConfigValue("readinglist_recent_months", 0.25),
+					latestRecent: 	BookSeriesDO.getConfigValue("readinglist_score_latestrecent", 2),
+				};
+
 				let volumesCOL = [];
 				this._COL.forEach(function(bookSeriesDO){
 
@@ -4022,13 +4038,13 @@
 					}
 
 					const score = (
-						+ (bookSeriesDO.isHighlight() ? 3 : 0) // Bonus if series is a highlight
-						+ (volumeDO.getColorder() === 1 ? 1 : 0) // Extra for volume ones
-						+ (2 * c.preorder) // Active preorders means you should get up to date
-						+ (0.5 * c.plusUnread) // Smaller bonus for accumulated series
-						- (1 * c.avail) // Negative bonus if you haven't been buying the latest releases
-						- (1 * c.timeSince) // The longer you've let it sit, the less likely you are to want to get back to it
-						+ (c.timeSince < 0.25 ? 2 : 0) // Bonus for latest volume released in last week
+						+ (bookSeriesDO.isHighlight() ? weights.highlight : 0) // Bonus if series is a highlight
+						+ (volumeDO.getColorder() === 1 ? weights.firstVolume : 0) // Extra for volume ones
+						+ (weights.preorder * c.preorder) // Active preorders means you should get up to date
+						+ (weights.extraUnread * c.plusUnread) // Smaller bonus for accumulated series
+						+ (weights.available * c.avail) // Negative bonus if you haven't been buying the latest releases
+						+ (weights.monthsSince * c.timeSince) // The longer you've let it sit, the less likely you are to want to get back to it
+						+ (c.timeSinceLatest < weights.recentMonths ? weights.latestRecent : 0) // Bonus for latest volume released in last week
 					);
 
 					volumeDO._tileNote = note;

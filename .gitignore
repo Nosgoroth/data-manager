@@ -36,3 +36,6 @@ login.php
 test.php
 tools/bookcheck/issuesOptions.js
 customajax_*.php
+
+config/*.json
+!config/*_example.json

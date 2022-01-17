@@ -77,6 +77,35 @@ if (file_exists('login.php')) {
 			?><script type='text/javascript' src='<?= $DOfile ?>?t=<?= $fmt ?>'></script><?php
 		}
 	?>
+	<script>
+		window._do_configs = {};
+		<?php
+			foreach(glob("config/*.json") as $configFile) {
+				try {
+					$fn = strtolower(basename($configFile, ".json"));
+					if (strpos($fn, '_example') !== false) {
+						continue;
+					}
+					$c = @file_get_contents($configFile);
+					$c = preg_replace('!/\*.*?\*/!s', '', $c); // Strip multi-line comments
+					$c = preg_replace('!//.*!', '', $c); // Strip single-line comments
+					$c = preg_replace('/\n\s*\n/', "\n", $c);  //Remove empty-lines
+					$d = @json_decode($c);
+					if (!$d) {
+						throw new Exception("Invalid JSON in config file $configFile");
+					}
+					?>
+					window._do_configs[<?= json_encode($fn) ?>] = <?= $c ?>;
+					<?php
+				} catch(Exception $e) {
+					// pass
+					?>
+					console.warn(<?= json_encode($e->getMessage()) ?>);
+					<?php
+				}
+			}
+		?>
+	</script>
 
 	<?php if (isset($_REQUEST["type"])) { ?>
 	<script type="text/javascript">
