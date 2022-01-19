@@ -2064,6 +2064,17 @@
 					? this.getRightstufSearchLink(volumeNumber)
 					: null
 					;
+				const yenpressLink =
+					(
+						(!volume || !volume?.getReleaseDate())
+						&&
+						(
+							publisher === this.__static.Enum.Publisher["Yen Press"]
+						)
+					)
+					? this.getYenPressSearchLink(volumeNumber)
+					: null
+					;
 
 				const prhLink =
 					(
@@ -2091,7 +2102,8 @@
 					{ url: amazonPhysLink, label: "Search on Amazon (Phys)", icon: 'icon-shopping-cart', },
 					{ url: koboLink, label: "Search on Kobo", icon: 'icon-shopping-cart', },
 					{ url: rightstufLink, label: "Search on Rightstuf", icon: 'icon-shopping-cart', },
-					{ url: prhLink, label: "Search on Penguin", icon: 'icon-shopping-cart', },
+					{ url: yenpressLink, label: "Search on Yen Press", icon: 'icon-search', },
+					{ url: prhLink, label: "Search on Penguin", icon: 'icon-search', },
 					{ url: googleAmazonLink, label: "Search on Amazon w/Google", icon: 'icon-search', },
 				];
 
@@ -2174,6 +2186,14 @@
 					kss += " "+volumeNumber;
 				}
 				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.co.jp`;
+			},
+			getYenPressSearchLink: function(volumeNumber){
+				var kss = this.getKindleSearchString();
+				if (!kss) { return null; }
+				if (volumeNumber) {
+					kss += " "+volumeNumber;
+				}
+				return `https://yenpress.com/search-list/?keyword=${ encodeURIComponent(kss) }`;
 			},
 			getKoboSearchLink: function(volumeNumber){
 				var kss = this.getKindleSearchString();
