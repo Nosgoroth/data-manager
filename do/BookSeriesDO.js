@@ -1584,6 +1584,13 @@
 						}.bind(this));
 					}.bind(this);
 
+
+					addOption($delaySubmenu).html('<i class="icon-calendar"></i> View release date history').click(function(){
+						alert(this.getReleaseDateHistoryAsString());
+					}.bind(this));
+
+					addSeparator($delaySubmenu);
+
 					
 					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input delay interval').click(function(){
 						const value = prompt("Enter interval (6 weeks, -2 months, 5 years)");
@@ -1600,6 +1607,15 @@
 						this.save();
 					}.bind(this));
 					
+
+					addOption($delaySubmenu).html('<i class="icon-chevron-right"></i> Input delay date').click(function(){
+						const def = _releaseDate.format("DD/MM/YYYY");
+						const value = prompt("Enter new release date (DD/MM/YYYY)", def);
+						if (!value || value === def) { return; }
+						this.setReleaseDate(value);
+						this.save();
+					}.bind(this));
+					
 					addSeparator($delaySubmenu);
 					
 					addDelayOption(1, 'week');
@@ -1610,9 +1626,6 @@
 
 					addSeparator($delaySubmenu);
 
-					addOption($delaySubmenu).html('<i class="icon-calendar"></i> View release date history').click(function(){
-						alert(this.getReleaseDateHistoryAsString());
-					}.bind(this));
 
 					const $moreSubmenu = addSubmenu("More", $delaySubmenu);
 
@@ -1621,16 +1634,6 @@
 					addDelayOption(3, 'months', null, $moreSubmenu);
 					addDelayOption(6, 'months', null, $moreSubmenu);
 					addDelayOption(1, 'year', null, $moreSubmenu);
-
-					addSeparator($moreSubmenu);
-
-					addOption($moreSubmenu).html('<i class="icon-chevron-right"></i> Input delay date').click(function(){
-						const def = _releaseDate.format("DD/MM/YYYY");
-						const value = prompt("Enter new release date (DD/MM/YYYY)", def);
-						if (!value || value === def) { return; }
-						this.setReleaseDate(value);
-						this.save();
-					}.bind(this));
 
 					addSeparator($moreSubmenu);
 
