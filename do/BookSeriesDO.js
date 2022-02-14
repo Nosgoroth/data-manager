@@ -2204,11 +2204,14 @@
 				if (volumeNumber) {
 					kss += " "+volumeNumber;
 				}
-				var koboSeriesId = this.getKoboSeriesId();
+
+				const ekss = encodeURIComponent(kss)
+					.replace("’", "%27");
+				const koboSeriesId = this.getKoboSeriesId();
+
 				if (koboSeriesId && !volumeNumber) {
-					return "https://www.kobo.com/es/en/search?query="+encodeURIComponent(kss)+"&fcsearchfield=Series&seriesId="+encodeURIComponent(koboSeriesId)+"&sort=PublicationDateDesc"
+					return "https://www.kobo.com/es/en/search?query="+ekss+"&fcsearchfield=Series&seriesId="+encodeURIComponent(koboSeriesId)+"&sort=PublicationDateDesc"
 				} else {
-					const ekss = encodeURIComponent(kss);
 					return "https://www.kobo.com/es/en/search?query="+ekss+"&nd=true&ac=1&ac.title="+ekss;
 				}
 			},
