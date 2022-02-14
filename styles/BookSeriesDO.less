@@ -111,6 +111,17 @@
 				border-left: 6px solid transparent;
 				content: '';
 			}
+
+			&.pull-right {
+				&:before {
+					left: auto;
+					right: 9px;
+				}
+				&:after {
+					left: auto;
+					right: 10px;
+				}
+			}
 		}
 
 		&[data-status="1"] .coverContainer { //Read
@@ -614,9 +625,6 @@
 
 
 }
-
-
-
 
 
 

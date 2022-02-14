@@ -52,6 +52,30 @@
 	  });
 	}
 
+	jQuery.prototype.onClassChange = function(callback) {
+		if (!window.MutationObserver) {
+			return null; // If no browser support, fail silently, return null
+		}
+		const observer = new MutationObserver((mutations, observer) => {
+			mutations.forEach((mutation) => {
+				const classes = this.attr("class")?.trim()?.split(" ");
+				callback?.(classes, observer);
+			});
+		});
+		observer.observe(this.get(0), {
+			attributes: true,
+			attributeFilter: ['class']
+		});
+		return observer;
+	}
+
+	jQuery.prototype.distanceToBottom = function() {
+		return jQuery(document).height() - this.offset().top - this.height();
+	}
+	jQuery.prototype.distanceToRight = function() {
+		return jQuery(document).width() - this.offset().left - this.width();
+	}
+
 	function timeSinceShort(unixms, seconds) {
 		if (unixms && !seconds) {
 			seconds = Math.floor((new Date() - unixms) / 1000);
@@ -1085,12 +1109,34 @@
 
 				//$cc.on('click', this.throwEditForm.bind(this));
 
-				$cc.attr("data-toggle", "dropdown")
-					.on('click', function(){
-						$cc.dropdown();
-					}.bind(this))
-					;
-				$ctr.appendR( this.renderDropdownMenu($ctr, coverSize) );
+				const $ddm = this.renderDropdownMenu($ctr, coverSize);
+				$ctr.appendR( $ddm );
+
+				$cc.attr("data-toggle", "dropdown").on('click', function(){					
+					const isOpen = $ctr.hasClass("open");
+					
+					if (!isOpen) {
+						const right = !!($ctr.distanceToRight() < 250);
+						$ddm.toggleClass("pull-right", right);
+						$ddm.find(".dropdown-submenu").toggleClass("dropdown-menu-right", right);
+					}
+
+					$cc.dropdown();
+
+					if (isOpen) { return; }
+					setTimeout(() => {
+						const $body = jQuery("body");
+						if ($ddm.distanceToBottom() < 500) {
+							$body.toggleClass("extraMenuBottomPadding", true);
+							$ctr.onClassChange((classes, observer) => {
+								if (classes && !classes?.includes("open")) {
+									$body.toggleClass("extraMenuBottomPadding", false);
+									observer.disconnect();
+								}
+							});
+						}
+					}, 0);
+				}.bind(this));
 
 				return $ctr;
 			},

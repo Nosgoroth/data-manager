@@ -13,10 +13,14 @@ body {
 }
 
 html, body {
-	height: 100%;
+	min-height: 100%;
 }
 body > .container {
-	height: 100%;
+	min-height: 100%;
+}
+
+body.extraMenuBottomPadding #app {
+	padding-bottom: 500px !important;
 }
 
 #app {
@@ -160,6 +164,11 @@ body > .container {
 			}
 		}
 	}
+}
+
+.dropdown-submenu.dropdown-menu-right > ul.dropdown-menu {
+	right: 100% !important;
+	left: auto;
 }
 
 
