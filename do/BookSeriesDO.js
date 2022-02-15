@@ -1960,7 +1960,8 @@
 				}
 			},
 			throwCreateForm: function(parent){
-				var newDO = this.DO({}, parent);
+				
+				const newDO = parent.addNextVolume({}, true);
 
 				var $form = newDO.renderAsForm(Object.shallowExtend({},{
 					submitText: "Create",
@@ -2917,7 +2918,7 @@
 				}
 			},
 
-			addNextVolume: function(data) {
+			addNextVolume: function(data, preventSave) {
 				data = data ? data : {};
 				const volumes = this.getVolumes();
 				const lastVolume = volumes[volumes.length - 1];
@@ -2929,11 +2930,13 @@
 					// Overwrites data
 					colorder: lastVolumeColorder + 1,
 				});
-				const newVolume = BookSeriesVolumeDO.DO(data);
-				volumes.push(newVolume);
-				lastVolume.setNextVolume(newVolume);
-				newVolume.setPreviousVolume(lastVolume);
-				this.saveVolumesFromCOL(volumes, true);
+				const newVolume = BookSeriesVolumeDO.DO(data, this);
+				if (!preventSave) {
+					volumes.push(newVolume);
+					lastVolume.setNextVolume(newVolume);
+					newVolume.setPreviousVolume(lastVolume);
+					this.saveVolumesFromCOL(volumes, true);
+				}
 				return newVolume;
 			},
 
