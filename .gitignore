@@ -39,3 +39,6 @@ customajax_*.php
 
 config/*.json
 !config/*_example.json
+
+bookseries_scrape.html
+bookseries_scrape_error.html

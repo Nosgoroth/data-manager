@@ -1,6 +1,4 @@
 (function(){
-
-
 	/*
 
 	To grab a whole series from Amazon from developer console:
@@ -11,10 +9,19 @@
 		// Physical (Amazon US)
 		[...document.querySelectorAll(".a-link-normal")].filter(el => (el.text && el.text.includes("Paperback"))).map(x => x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")).join("\n ")
 
+	Shortcut for filling the volumes of a series: Paste into the volumes field of the series (which would normally contain raw json) a list of volumes, one per line, in the following format:
+
 	colorder;asin;status;sourceasin;otherasin;orderlabel
-	Read = 1, Backlog = 2, Phys = 4, Source = 6 (ASIN will be interpreted as source asin), Available = 7
 
+	As a reminder, volume status => Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
+	(ASIN will be interpreted as source asin if status=6)
 
+	Example:
+
+	1;B07RSBNN6S;7;B098G2621H;;I
+	2;B0916C8BD2;6;;;II
+	3;B08TYF1MNV;6;;;III
+	4;B08KYGV773;6;;;IV
 
 	*/
 

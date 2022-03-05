@@ -1,45 +1,6 @@
 <?php
 
 
-
-class AmazonJpAsinScraper {
-
-	private $ASIN;
-	private $raw;
-
-	function __construct($ASIN) {
-		$this->ASIN = $ASIN;
-	}
-
-	function read($debug = false) {
-		//return;
-		$this->raw = file_get_contents("https://www.amazon.co.jp/gp/product/".$this->ASIN.'?language=ja_JP');
-		if (isGzipHeaderSet(transformIntoHeaderMap($http_response_header))) {
-			$this->raw = gzdecode($this->raw);
-		}
-		$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
-	}
-
-	function extractPubDate(){
-		mb_internal_encoding('UTF-8');
-		//$this->raw = '<span class="a-text-bold">出版社 &rlm; : &lrm;</span> <span> KADOKAWA (2016/1/25)</span>';
-		//$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
-		preg_match("/出版社[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.*[\s]\(([\d\/]+)\)\</s", $this->raw, $matches);
-		//var_dump($matches); die();
-		if (count($matches) > 1) {
-			return $matches[1];
-		} else {
-			return null;
-		}
-	}
-
-	function extractMoreEditions() {
-		return null;
-	}
-
-}
-
-
 if (!function_exists("gzdecode")) {
 	function gzdecode($data) { 
 		return gzinflate(substr($data,10,-8)); 
@@ -66,18 +27,74 @@ function isGzipHeaderSet(array $headerMap) {
 
 
 
+abstract class BaseScraper {
 
-class AmazonComAsinScraper {
+	protected $raw;
+	protected $id;
 
-	private $ASIN;
-	private $raw;
-
-	function __construct($ASIN) {
-		$this->ASIN = $ASIN;
+	function __construct($id) {
+		$this->id = $id;
 	}
 
+	abstract public function read($debug = false);
+
+	protected function writeRawToFile() {
+		file_put_contents("bookseries_scrape.html", $this->raw);
+	}
+	protected function writeRawToErrorFile() {
+		file_put_contents("bookseries_scrape_error.html", $this->raw);
+	}
+}
+
+abstract class BaseAmazonScraper extends BaseScraper {
+	abstract public function extractPubDate();
+}
+
+
+class AmazonJpAsinScraper extends BaseAmazonScraper {
+
 	function read($debug = false) {
-		$this->raw = file_get_contents("https://smile.amazon.com/dp/".$this->ASIN, false, stream_context_create(array(
+		//return;
+		$this->raw = file_get_contents("https://www.amazon.co.jp/gp/product/".$this->id.'?language=ja_JP');
+		if (isGzipHeaderSet(transformIntoHeaderMap($http_response_header))) {
+			$this->raw = gzdecode($this->raw);
+		}
+		$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
+		$this->writeRawToFile();
+
+		if ($debug) {
+			print $this->raw;
+			die();
+		}
+	}
+
+	function extractPubDate(){
+		mb_internal_encoding('UTF-8');
+		//$this->raw = '<span class="a-text-bold">出版社 &rlm; : &lrm;</span> <span> KADOKAWA (2016/1/25)</span>';
+		//$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
+		preg_match("/出版社[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.*[\s]\(([\d\/]+)\)\</s", $this->raw, $matches);
+		//var_dump($matches); die();
+		if (count($matches) > 1) {
+			return $matches[1];
+		} else {
+			$this->writeRawToErrorFile();
+			return null;
+		}
+	}
+
+	function extractMoreEditions() {
+		return null;
+	}
+
+}
+
+
+
+
+class AmazonComAsinScraper extends BaseAmazonScraper {
+
+	function read($debug = false) {
+		$this->raw = file_get_contents("https://smile.amazon.com/dp/".$this->id, false, stream_context_create(array(
 			"http" => array(
 				"method" => "GET",
 		        "header" => implode("\r\n", array(
@@ -92,11 +109,12 @@ class AmazonComAsinScraper {
 		if (isGzipHeaderSet(transformIntoHeaderMap($http_response_header))) {
 			$this->raw = gzdecode($this->raw);
 		}
+		$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
+		$this->writeRawToFile();
 		if ($debug) {
 			print $this->raw;
 			die();
 		}
-		$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
 	}
 
 	function extractKindleAsin() {
@@ -126,6 +144,7 @@ class AmazonComAsinScraper {
 		}
 
 		//header('Content-type: text/plain'); die($this->raw);
+		$this->writeRawToErrorFile();
 		return null;
 	}
 
@@ -139,6 +158,7 @@ class AmazonComAsinScraper {
 			}
 			return $dp["day"]."/".$dp["month"]."/".$dp["year"];
 		} catch (Exception $e) {
+			$this->writeRawToErrorFile();
 			return null;
 		}
 	}
@@ -148,13 +168,7 @@ class AmazonComAsinScraper {
 
 
 
-class KoboScraper {
-	private $id;
-	private $raw;
-
-	function __construct($id) {
-		$this->id = $id;
-	}
+class KoboScraper extends BaseScraper {
 
 	function read($debug = false) {
 		$this->raw = file_get_contents("https://www.kobo.com/es/en/ebook/".$this->id, false, stream_context_create(array(
@@ -174,6 +188,7 @@ class KoboScraper {
 		if (isGzipHeaderSet(transformIntoHeaderMap($http_response_header))) {
 			$this->raw = gzdecode($this->raw);
 		}
+		$this->writeRawToFile();
 		if ($debug) {
 			print $this->raw;
 			die();
@@ -210,6 +225,10 @@ class KoboScraper {
 			if (count($matches) > 1 && isset($matches[$matcher["cgindex"]])) {
 				$data[$matcher["key"]] = $matches[$matcher["cgindex"]];
 			}
+		}
+
+		if (count($data) === 0) {
+			$this->writeRawToErrorFile();
 		}
 
 		return $data;
