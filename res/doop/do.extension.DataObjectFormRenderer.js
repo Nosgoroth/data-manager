@@ -343,7 +343,13 @@ DataObjects.Base.__extend({
 
 		var data = $form.serializeArray();
 		for (var i = 0; i < data.length; i++) {
-			rawdata[data[i].name] = data[i].value;
+			var val = data[i].value;
+			try {
+				val = val.trim();
+			} catch (error) {
+				// pass
+			}
+			rawdata[data[i].name] = val;
 		}
 
 		var booldata = $form.find('input:checkbox').map(function() {
