@@ -2929,13 +2929,13 @@
 				data = data ? data : {};
 				const volumes = this.getVolumes();
 				const lastVolume = volumes[volumes.length - 1];
-				const lastVolumeColorder = lastVolume.getColorder();
+				const lastVolumeColorder = lastVolume?.getColorder();
 				data = Object.shallowExtend({
 					// Defaults
 					status: BookSeriesVolumeDO.Enum.Status.None,
 				}, data, {
 					// Overwrites data
-					colorder: lastVolumeColorder + 1,
+					colorder: lastVolumeColorder ? lastVolumeColorder + 1 : 1,
 				});
 				const newVolume = BookSeriesVolumeDO.DO(data, this);
 				if (!preventSave) {
