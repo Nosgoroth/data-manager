@@ -4224,6 +4224,11 @@
 						.attr("target", "_blank")
 						.text("Stats")
 						;
+					addOption()
+						.attr("href", "./tools/bookshelf/")
+						.attr("target", "_blank")
+						.text("Bookshelf")
+						;
 
 					addSeparator();
 					addOption()
