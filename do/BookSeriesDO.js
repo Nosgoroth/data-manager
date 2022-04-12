@@ -561,7 +561,14 @@
 			getReleaseDateHistoryAsString: function(){
 				const h = this.getReleaseDateHistoryParsed();
 				if (!h?.length) { return "(No history)"; }
-				return h.map(x => `Releasing ${x.rd}, added on ${x.ad}`).join("\n");
+				return h.map(x => {
+					let ret = [];
+					ret.push(x.rd ? `Releasing ${x.rd}` : `No release date`);
+					if (x.ad) {
+						ret.push(`added on ${x.ad}`);
+					}
+					return ret.join(", ");
+				}).join("\n");
 			},
 
 			isOwned: function() {
@@ -1316,7 +1323,7 @@
 					$dataContent.appendR('<p class="notes">').text(notes);
 				}
 
-				if (this._scoreDisplay) {
+				if (this._scoreDisplay && this.__static.shouldDisplayBacklogScore) {
 					$dataContent.appendR('<p class="scoreDisplay">').text(`[${ this._scoreDisplay }]`);
 				}
 
@@ -1601,8 +1608,7 @@
 
 
 				const _releaseDate = this.getReleaseDateMoment();
-				if (_releaseDate && [
-					this.__static.Enum.Status.Preorder,
+				if ([this.__static.Enum.Status.Preorder,
 					this.__static.Enum.Status.StoreWait,
 					this.__static.Enum.Status.Available,
 					this.__static.Enum.Status.Phys,
@@ -1611,6 +1617,7 @@
 					const $delaySubmenu = addSubmenu("Delay options");
 					
 					const addDelayOption = function(units, unitName, _delayedMoment, $parentMenu){
+						if (!_releaseDate) { return;}
 						let name;
 						if (units && unitName) {
 							_delayedMoment = moment(_releaseDate).add(units, unitName);
@@ -1942,6 +1949,9 @@
 					"releaseDateHistory", "ibooksId", "mangaCalendarId", "mangaCalendarEnabled"
 				]
 			},
+
+			shouldDisplayBacklogScore: false,
+
 			sortByReleaseDate: function(volumesCOL, reverse) {
 				volumesCOL.sort(function(aDO, bDO){
 					return aDO.getBestReleaseDateMoment() - bDO.getBestReleaseDateMoment();
@@ -4107,11 +4117,11 @@
 					if (c.plusUnread > 0) {
 						notes.push(c.plusUnread + " more");
 					}
-					if (c.avail > 0) {
-						notes.push(c.avail + " available");
-					}
 					if (c.preorder > 0) {
 						notes.push(c.preorder + " preordered");
+					}
+					if (c.avail > 0) {
+						notes.push(c.avail + " available");
 					}
 
 					let note = null;
@@ -4716,9 +4726,9 @@
 			_classToggles: [
 				{ title: "Inactive", class: "hide-inactive", default: true },
 				{ title: "Considering", class: "hide-considering", default: true },
-				{ title: "Unlicensed", class: "hide-unlicensed", default: false },
+				{ title: "Unlicensed", class: "hide-unlicensed", default: true },
+				{ title: "Stalled", class: "hide-stalled", default: true },
 				{ title: "Prepub", class: "hide-prepub", default: false },
-				{ title: "Stalled", class: "hide-stalled", default: false },
 				{ title: "Announced", class: "hide-unreleased", default: false },
 				{ title: "Up to date", class: "hide-up-to-date", default: false },
 				{ title: "UTD+Pre", class: "hide-up-to-date-preordered", default: false },
