@@ -512,7 +512,7 @@ window.CustomDataObjectEditor = Object.extends({
 			jQuery.each(this._filterValues, function(field, filterVal){
 				if (shouldFilter) { return; } //If any filter was true, no need to keep looking 
 				var attr = "data-fieldvalue-"+field;
-				if (!dom_dataObjectItem.hasAttribute(attr)) { return; }
+				//if (!dom_dataObjectItem.hasAttribute(attr)) { return; }
 				var rowval = $dataObjectItem.attr(attr);
 				if (filterVal !== "" && filterVal !== rowval) {
 					shouldFilter = true;
