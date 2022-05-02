@@ -29,12 +29,19 @@ window.JsonAjaxInterface = Object.extends({
 	jsonAjaxLoad: function(success, error){
 		success = ((typeof success === "function") ? success : function(){});
 		error = ((typeof error === "function") ? error : function(){});
+
+		var data = {
+			action: "ajaxload",
+			domain: this._type.DOname,
+		};
+
+		if (!this._allowCacheResponses) {
+			data["t"] = Date.now();
+		}
+
 		jQuery.ajax({
 			url: this._ajaxendpoint,
-			data: {
-				action: "ajaxload",
-				domain: this._type.DOname
-			},
+			data: data,
 			method: "POST",
 			dataType: "json",
 			success: function(data){
