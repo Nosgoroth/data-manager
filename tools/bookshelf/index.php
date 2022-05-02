@@ -5,6 +5,9 @@ if (file_exists('../../login.php')) {
 	require_once("../../login.php");
 }
 
+$coverWidth = isset($_REQUEST["coverWidth"]) ? intval($_REQUEST["coverWidth"]) : null;
+
+
 
 ?><!DOCTYPE html><html><head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -24,6 +27,14 @@ if (file_exists('../../login.php')) {
 	$fmt = $fmt ? $fmt : 0;
 	?>
 	<link rel="stylesheet/less" type="text/css" href="style.less?t=<?= $fmt ?>" />
+
+	<?php if ($coverWidth && !is_nan($coverWidth)) { ?>
+		<style type="text/css">
+			#bookshelf li {
+				width: <?= $coverWidth ?>px;
+			}
+		</style>
+	<?php } ?>
 	
 	<meta name="robots" content="noindex" />
 </head>

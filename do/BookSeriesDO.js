@@ -4235,7 +4235,7 @@
 						.text("Stats")
 						;
 					addOption()
-						.attr("href", "./tools/bookshelf/")
+						.attr("href", "./tools/bookshelf/?coverWidth=30")
 						.attr("target", "_blank")
 						.text("Bookshelf")
 						;
