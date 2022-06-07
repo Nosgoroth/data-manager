@@ -420,8 +420,6 @@
 		},
 	]);
 
-
-
 	window.BookSeriesVolumeDO = DataObjects.createDataObjectType({
 		name: "BookSeriesVolume",
 		types: {
@@ -431,6 +429,9 @@
 			status: ["enum", [
 				"Read", "Backlog", "Preorder", "Phys",
 				"None", "Source", "Available", "StoreWait"
+			]],
+			statusSource: ["enum", [
+				"Read", "Backlog", "Preorder", "Available"
 			]],
 			notes: "string",
 			releaseDate: "string", //DD/MM/YYYY
@@ -447,6 +448,9 @@
 			preorderDate: "string", // DD/MM/YYYY
 			purchasedDate: "string", //DD/MM/YYYY
 			readDate: "string", //DD/MM/YYYY
+			preorderDateSource: "string", // DD/MM/YYYY
+			purchasedDateSource: "string", //DD/MM/YYYY
+			readDateSource: "string", //DD/MM/YYYY
 			//prepubStartDate: "string",
 			//prepubEndDate: "string",
 			mangaCalendarId: "string",
@@ -506,6 +510,9 @@
 				});
 
 				this.nextVolumeDO = this.options.nextVolumeDO;
+
+				//this.getStatusSourceOrig = this.getStatusSource;
+				//this.getStatusSource = this.getStatusSourceReplaced;
 			},
 
 
@@ -516,6 +523,13 @@
 					+"_"+this.getBestAsinForLink()
 					+"_"+this.getKoboId()
 					;
+			},
+
+			
+			getStatusSource: function() {
+				const ss = this.get("statusSource");
+				if (!ss) { return BookSeriesVolumeDO.Enum.StatusSource.Available; }
+				return ss;
 			},
 
 			isManualPhysKindleCheckOnly: function() {
@@ -573,6 +587,8 @@
 					return ret.join(", ");
 				}).join("\n");
 			},
+
+
 
 			isOwned: function() {
 				return ([
@@ -726,11 +742,11 @@
 			},
 
 			getBestPurchasedDateMoment: function() {
-				return this.getPurchasedDateMoment() ?? this.getBestReleaseDateMoment();
+				return this.getPurchasedDateMoment() ?? this.getPurchasedDateSourceMoment() ?? this.getBestReleaseDateMoment();
 			},
 
 			getBestReadDateMoment: function() {
-				return this.getReadDateMoment() ?? this.getBestReleaseDateMoment();
+				return this.getReadDateMoment() ?? this.getReadDateSourceMoment() ?? this.getBestReleaseDateMoment();
 			},
 
 
@@ -1023,18 +1039,17 @@
 				return this.getBestReleaseDateMoment().format("YYYY-MM-DD");
 			},
 
-			getReadDateMoment: function() {
-				const m = moment(this.getReadDate(), 'DD/MM/YYYY');
+			getAsMoment: function(key, format) {
+				const m = moment(this.get(key), format);
 				return m.isValid() ? m : null;
 			},
-			getPurchasedDateMoment: function() {
-				const m = moment(this.getPurchasedDate(), 'DD/MM/YYYY');
-				return m.isValid() ? m : null;
+			getAsMomentDDMMYYYY: function(key) {
+				return this.getAsMoment(key, 'DD/MM/YYYY');
 			},
-			getPreorderDateMoment: function() {
-				const m = moment(this.getPreorderDate(), 'DD/MM/YYYY');
-				return m.isValid() ? m : null;
-			},
+
+			getReadDateMoment: function() { return this.getAsMomentDDMMYYYY("readDate"); },
+			getPurchasedDateMoment: function() { return this.getAsMomentDDMMYYYY("purchasedDate"); },
+			getPreorderDateMoment: function() { return this.getAsMomentDDMMYYYY("preorderDate"); },
 			getPreorderOrPurchaseDateMoment: function() {
 				const preorderMoment = this.getPreorderDateMoment();
 				if (preorderMoment) { return preorderMoment; }
@@ -1042,6 +1057,9 @@
 				if (purchaseMoment) { return purchaseMoment; }
 				return null;
 			},
+			getReadDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("readDateSource"); },
+			getPurchasedDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("purchasedDateSource"); },
+			getPreorderDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("preorderDateSource"); },
 
 			hasNotes: function(){
 				switch(this.getStatus()) {
@@ -1066,14 +1084,18 @@
 				var colorder = this.getColorder(),
 					orderLabel = this.getCollectionOrderLabel(),
 					status = this.getStatus(),
+					statusSource = this.getStatusSource(),
 					coverSize = 120,
 					coverUrl = this.getCoverUrl(coverSize),
 					notes = this.getNotes();
 				var $ctr = jQuery('<span class="bookSeriesVolume">')
-					.attr('data-status', status);
+					.attr('data-status', status)
+					.attr('data-status-source', statusSource)
+					;
 				var $cc = $ctr.appendR('<span class="coverContainer">');
 				var $co = $cc.appendR('<span class="colorder">').text(orderLabel);
 				var $cf = $cc.appendR('<span class="coverframe">');
+				$cc.appendR('<span class="sourcepip">');
 				var $c = $cf.appendR('<span class="cover">')
 					.css('background-image', 'url('+coverUrl+')')
 					;
@@ -1204,7 +1226,7 @@
 					case this.__static.Enum.Status.Source:
 						addStatus(this.__static.Enum.Status.Preorder, "preorder");
 						addStatus(this.__static.Enum.Status.Available, "available");
-						addStatus(this.__static.Enum.Status.Phys, "Phys");
+						addStatus(this.__static.Enum.Status.Phys, "phys");
 						addStatus(this.__static.Enum.Status.Backlog, "backlog");
 						addStatus(this.__static.Enum.Status.Read, "read");
 						break;
@@ -1216,6 +1238,39 @@
 						addStatus(this.__static.Enum.Status.Preorder, "preorder");
 						addStatus(this.__static.Enum.Status.Backlog, "backlog");
 						addStatus(this.__static.Enum.Status.Read, "read");
+						break;
+				}
+
+				return statuses;
+			},
+			getNextStatusesSource: function() {
+
+				var statuses = [];
+
+				var addStatus = function(id, label) {
+					statuses.push([id, label]);
+				}
+
+				var status = this.getStatusSource();
+
+
+				switch(status) {
+					default: break;
+					case this.__static.Enum.StatusSource.Read:
+						addStatus(this.__static.Enum.StatusSource.Backlog, "backlog");
+						break;
+					case this.__static.Enum.StatusSource.Backlog:
+						addStatus(this.__static.Enum.StatusSource.Read, "read");
+						break;
+					case this.__static.Enum.StatusSource.Preorder:
+						addStatus(this.__static.Enum.StatusSource.Available, "available");
+						addStatus(this.__static.Enum.StatusSource.Backlog, "backlog");
+						//addStatus(this.__static.Enum.StatusSource.Read, "read");
+						break;
+					case this.__static.Enum.StatusSource.Available:
+						addStatus(this.__static.Enum.StatusSource.Preorder, "preorder");
+						addStatus(this.__static.Enum.StatusSource.Backlog, "backlog");
+						//addStatus(this.__static.Enum.StatusSource.Read, "read");
 						break;
 				}
 
@@ -1274,6 +1329,7 @@
 				});
 
 				const status = this.getStatus();
+				const statusSource = this.getStatusSource();
 				const parentStatus = this.parent.getStatus();
 				const coverSize = 500;
 				const coverUrl = this.getCoverUrl(coverSize);
@@ -1283,6 +1339,7 @@
 					.addClass("bookSeriesVolumeTile")
 					.attr({
 						"data-status": status,
+						"data-status-source": statusSource,
 						"data-parentstatus": parentStatus
 					})
 					;
@@ -1394,9 +1451,16 @@
 					return $submenu.appendR('<li>').addClass('divider');
 				}
 				
-				var addSetStatusOption = function(newstatus, name){
-					return addOption().html('<i class="icon-chevron-right"></i> Set '+name).click(function(){
+				var addSetStatusOption = function(newstatus, name, $submenu){
+					return addOption($submenu).html('<i class="icon-chevron-right"></i> Set '+name).click(function(){
 						this.setStatus(newstatus);
+						this.save();
+					}.bind(this));
+				}.bind(this);
+				
+				var addSetStatusSourceOption = function(newstatus, name, $submenu){
+					return addOption($submenu).html('<i class="icon-chevron-right"></i> Set '+name).click(function(){
+						this.setStatusSource(newstatus);
 						this.save();
 					}.bind(this));
 				}.bind(this);
@@ -1410,12 +1474,25 @@
 
 				var status = this.getStatus();
 
+				const $statusSubmenu = addSubmenu("Set status");
+
 				const nextStatuses = this.getNextStatuses();
 				for (var i = 0; i < nextStatuses.length; i++) {
 					const item = nextStatuses[i];
 					const id = item[0];
 					const label = item[1];
-					addSetStatusOption(id, label);
+					addSetStatusOption(id, label, $statusSubmenu);
+				}
+
+				
+				const $statusSourceSubmenu = addSubmenu("Set source status");
+
+				const nextStatusesSource = this.getNextStatusesSource();
+				for (var i = 0; i < nextStatusesSource.length; i++) {
+					const item = nextStatusesSource[i];
+					const id = item[0];
+					const label = item[1];
+					addSetStatusSourceOption(id, label, $statusSourceSubmenu);
 				}
 
 
@@ -1836,6 +1913,7 @@
 			beforeSave: function() {
 
 				const status = this.getStatus();
+				const statusSource = this.getStatusSource();
 				const today_ddmmyyyy = moment().format("DD/MM/YYYY");
 
 				switch(status) {
@@ -1852,6 +1930,25 @@
 					case this.__static.Enum.Status.Preorder:
 						if (!this.getPreorderDate()) {
 							this.setPreorderDate(today_ddmmyyyy);
+						}
+						break;
+					default:
+						break;
+				}
+				switch(statusSource) {
+					case this.__static.Enum.StatusSource.Read:
+						if (!this.getReadDateSource()) {
+							this.setReadDateSource(today_ddmmyyyy);
+						}
+						// break; // CONTINUE LOL
+					case this.__static.Enum.StatusSource.Backlog:
+						if (!this.getPurchasedDateSource()) {
+							this.setPurchasedDateSource(today_ddmmyyyy);
+						}
+						break;
+					case this.__static.Enum.StatusSource.Preorder:
+						if (!this.getPreorderDateSource()) {
+							this.setPreorderDateSource(today_ddmmyyyy);
 						}
 						break;
 					default:
@@ -1949,7 +2046,10 @@
 				event: {},
 				typeoptions: {},
 				hideFields: [
-					"releaseDateHistory", "ibooksId", "mangaCalendarId", "mangaCalendarEnabled"
+					"releaseDateHistory", "ibooksId", "bookwalkerJpId", "isbn",
+					"mangaCalendarId", "mangaCalendarEnabled",
+					"preorderDate", "purchasedDate", "readDate",
+					"preorderDateSource", "purchasedDateSource", "readDateSource",
 				]
 			},
 
@@ -3958,14 +4058,17 @@
 
 				var BSEnumStatus = BookSeriesDO.Enum.Status;
 				var BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+				var BSVEnumStatusSource = BookSeriesVolumeDO.Enum.StatusSource;
 
 				var volumesCOL = [];
 				this._COL.forEach(function(bookSeriesDO){
 
+					/*
 					var status = bookSeriesDO.getStatus();
 					if (![BSEnumStatus.Backlog].includes(status)) {
 						return;
 					}
+					*/
 
 					var seriesVolumesCOL = bookSeriesDO.getVolumes();
 
@@ -3974,7 +4077,8 @@
 							return;
 						}
 						var volstatus = volumeDO.getStatus();
-						if (![BSVEnumStatus.Backlog].includes(volstatus)) {
+						var volstatusSource = volumeDO.getStatusSource();
+						if (![BSVEnumStatus.Backlog].includes(volstatus) && ![BSVEnumStatusSource.Backlog].includes(volstatusSource)) {
 							return;
 						}
 						volumesCOL.push(volumeDO);
@@ -4014,6 +4118,7 @@
 
 				var BSEnumStatus = BookSeriesDO.Enum.Status;
 				var BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+				var BSVEnumStatusSource = BookSeriesVolumeDO.Enum.StatusSource;
 
 				var volumesCOL = [];
 				this._COL.forEach(function(bookSeriesDO){
@@ -4027,7 +4132,8 @@
 							return;
 						}
 						var volstatus = volumeDO.getStatus();
-						if (![BSVEnumStatus.Read].includes(volstatus)) {
+						var volstatusSource = volumeDO.getStatusSource();
+						if (![BSVEnumStatus.Read].includes(volstatus) && ![BSVEnumStatusSource.Read].includes(volstatusSource)) {
 							return;
 						}
 						volumesCOL.push(volumeDO);
