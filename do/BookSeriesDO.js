@@ -11,17 +11,19 @@
 
 	Shortcut for filling the volumes of a series: Paste into the volumes field of the series (which would normally contain raw json) a list of volumes, one per line, in the following format:
 
-	colorder;asin;status;sourceasin;otherasin;orderlabel
+	colorder;asin;status;sourceasin;otherasin;orderlabel;koboId
 
 	As a reminder, volume status => Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
 	(ASIN will be interpreted as source asin if status=6)
 
 	Example:
 
-	1;B07RSBNN6S;7;B098G2621H;;I
+	1;B07RSBNN6S;7;B098G2621H;;I;series-id-kobo-vol-1
 	2;B0916C8BD2;6;;;II
 	3;B08TYF1MNV;6;;;III
 	4;B08KYGV773;6;;;IV
+
+	This is parsed in the constructor for BookSeriesVolumeDO
 
 	*/
 
@@ -494,6 +496,7 @@
 						}
 					}
 					this._rawdata.orderLabel = rawdata[5] ? rawdata[5].trim() : window.undefined;
+					this._rawdata.koboId = rawdata[6] ? rawdata[6].trim() : window.undefined;
 				}
 
 				this.options = populateDefaultOptions(options, {
@@ -1858,11 +1861,11 @@
 				this.processReleaseDateHistory();
 
 			},
-			save: function(){
+			save: function(dontSaveAndUpdate){
 				this.beforeSave();
 				var volumesCOL = this.parent.getVolumes();
 				volumesCOL.get( this.pkGet() ).set(this.get());
-				this.parent.saveVolumesFromCOL(volumesCOL);
+				this.parent.saveVolumesFromCOL(volumesCOL, dontSaveAndUpdate);
 				if (window.customMultiDataObjectEditor) {
 					window.customMultiDataObjectEditor._editor.closeForm();
 				}
@@ -4069,6 +4072,8 @@
 					monthsSince: 	BookSeriesDO.getConfigValue("readinglist_weight_monthssince", -1),
 					recentMonths: 	BookSeriesDO.getConfigValue("readinglist_recent_months", 0.25),
 					latestRecent: 	BookSeriesDO.getConfigValue("readinglist_score_latestrecent", 2),
+					caughtUp: 		BookSeriesDO.getConfigValue("readinglist_score_caughtup", 2),
+					caughtUpFinished: 	BookSeriesDO.getConfigValue("readinglist_score_caughtup_finished", 3),
 				};
 
 				let volumesCOL = [];
@@ -4100,6 +4105,9 @@
 
 					const volumeDO = unreadVolumesCOL[0];
 					const latestOwned = unreadVolumesCOL[unreadVolumesCOL.length - 1];
+					const latestVolumeSource = seriesVolumesCOL[seriesVolumesCOL.length - 1];
+
+
 
 					const c = {
 						unread: unreadVolumesCOL.length,
@@ -4110,6 +4118,8 @@
 						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
 						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
 						timeSinceLatest: moment().diff(latestOwned.getBestReleaseDateMoment(), 'months', true),
+						caughtUp: (latestVolumeSource.getColorder() === latestOwned.getColorder()),
+						finished: bookSeriesDO.isFinishedPublication()
 					};
 
 					const notes = [];
@@ -4128,6 +4138,12 @@
 					if (notes.length) {
 						note = "Plus " + notes.join(", ")
 					}
+					if (c.caughtUp) {
+						note = (note ? note+'; ' : '') + (c.finished ? 'finished' : 'caught up');
+					}
+					if (note) {
+						note = note.charAt(0).toUpperCase() + note.slice(1);
+					}
 
 					const score = (
 						+ (bookSeriesDO.isHighlight() ? weights.highlight : 0) // Bonus if series is a highlight
@@ -4137,6 +4153,8 @@
 						+ (weights.available * c.avail) // Negative bonus if you haven't been buying the latest releases
 						+ (weights.monthsSince * c.timeSince) // The longer you've let it sit, the less likely you are to want to get back to it
 						+ (c.timeSinceLatest < weights.recentMonths ? weights.latestRecent : 0) // Bonus for latest volume released in last week
+						+ (c.caughtUp ? weights.caughtUp : 0)
+						+ (c.caughtUp && c.finished ? weights.caughtUpFinished : 0)
 					);
 
 					volumeDO._tileNote = note;
@@ -4366,14 +4384,17 @@
 				var total = stats.volumes.owned + stats.volumes.preorder;
 				$progress.appendR('<div class="bar bar-info">')
 					.text(stats.volumes.read)
+					.attr("title", `${stats.volumes.read} read`)
 					.css("width",(100*stats.volumes.read/total)+"%")
 					;
 				$progress.appendR('<div class="bar bar-warning">')
 					.text(stats.volumes.backlog)
+					.attr("title", `${stats.volumes.backlog} in backlog`)
 					.css("width",(100*stats.volumes.backlog/total)+"%")
 					;
 				$progress.appendR('<div class="bar bar-success">')
 					.text(stats.volumes.preorder)
+					.attr("title", `${stats.volumes.preorder} preordered`)
 					.css("width",(100*stats.volumes.preorder/total)+"%")
 					;
 
@@ -4388,10 +4409,12 @@
 
 				$progress.appendR('<div class="bar bar-danger">')
 					.text(ownedMangaCount)
+					.attr("title", `${ownedMangaCount} manga volumes owned`)
 					.css("width",(100*ownedMangaCount/total)+"%")
 					;
 				$progress.appendR('<div class="bar bar-info">')
 					.text(ownedNovelCount)
+					.attr("title", `${ownedNovelCount} novel volumes owned`)
 					.css("width",(100*ownedNovelCount/total)+"%")
 					;
 					/*

@@ -485,16 +485,7 @@ window.BookSeriesIssueItem = Object.extends({
 	},
 
 	save: function(complete) {
-		this.jsonAjaxInterface.jsonAjaxSave(
-			() => {
-				complete?.();
-				this.jsonAjaxInterface.rerender();
-			},
-			() => {
-				complete?.();
-				alert("Error: couldn't save");
-			}
-		);
+		this.jsonAjaxInterface.save(complete);
 	},
 
 	getIssueName: function() {
@@ -1092,6 +1083,37 @@ window.bookSeriesAjaxInterface = Object.extends({
 		return Object.assign({}, this._issuesOptions);
 	},
 
+	scrapeInfoFromIssues: async function(issues) {
+		const promiseGenerators = issues.map(issue => {
+			return () => {
+				return new Promise(complete => {
+					issue.bookSeriesDO.getPubDatesFromAsins(() => {
+						complete();
+					}, false);
+				})
+			};
+		});
+		alert("Now scraping...\nClose this message and don't do any more operations until complete.\nYou can see progress information in the console. Press F12 / Ctrl+Shift+i / Cmd+Opt+i to open it.");
+		for (var i = 0; i < promiseGenerators.length; i++) {
+			await promiseGenerators[i]();
+		}
+		alert("Complete. Saving and reloading...");
+		this.save();
+	},
+
+	save: function(complete) {
+		this.jsonAjaxSave(
+			() => {
+				complete?.();
+				this.rerender();
+			},
+			() => {
+				complete?.();
+				alert("Error: couldn't save");
+			}
+		);
+	},
+
 	JsonAjaxInterface_afterDataReady: async function(){
 
 		window._ajaxBookseriesUri = "../../ajax_bookseries.php";
@@ -1185,7 +1207,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 				BookSeriesIssue.VolumeAvailable,
 				BookSeriesIssue.PreorderAvailable,
 				BookSeriesIssue.AwaitingStoreAvailability,
-				BookSeriesIssue.AwaitingDigitalVersion,
+				// BookSeriesIssue.AwaitingDigitalVersion,
 				BookSeriesIssue.NoLocalStoreReferences,
 				BookSeriesIssue.WaitingForLocal,
 				BookSeriesIssue.LocalVolumeOverdue,
@@ -1196,7 +1218,16 @@ window.bookSeriesAjaxInterface = Object.extends({
 			].filter(x => existingIssueTypesUnsorted.indexOf(x) !== -1);
 			
 			for (const issueType of existingIssueTypes) {
-				$issues.appendR('<h4>').text( getBookSeriesIssueName(issueType) );
+				const $header = $issues.appendR('<div>').addClass("issueHeader");
+				$header.appendR('<h4>').text( getBookSeriesIssueName(issueType) );
+
+				if (issueType === BookSeriesIssue.MissingInformation) {
+					$header.appendR('<button>').addClass("btn btn-mini btn-inverse").text("Scrape info for all").click(event => {
+						event.preventDefault(); event.stopPropagation();
+						this.scrapeInfoFromIssues(issuesSorted[issueType]);
+					});
+				}
+
 				const $ul = $issues.appendR('<ul class="issues">');
 				let prevIssue = null;
 				for (const issue of issuesSorted[issueType]) {
@@ -1209,13 +1240,16 @@ window.bookSeriesAjaxInterface = Object.extends({
 			window._issues = issues;
 		}
 		
-	},
+	}
+
 	// jsonAjaxSave: function(success, error){
 },{
 	name: "JsonAjaxInterfaceForBookSeries",
 	instance: true,
 	parent: JsonAjaxInterface
 });
+
+
 
 
 /*

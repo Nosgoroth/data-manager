@@ -11,6 +11,8 @@
 	"readinglist_weight_monthssince": -1, // Added to score multiplied by number of months since release of first unread book in series
 	"readinglist_recent_months": 0.25, // How long is considered "recent" (in months)
 	"readinglist_score_latestrecent": 2, // If latest unread book bought is recent, added to score multiplied by number of months since release of latest unread book in series
+	"readinglist_score_caughtup": 2,
+	"readinglist_score_caughtup_finished": 5,
 
 	"_": ""
 }
