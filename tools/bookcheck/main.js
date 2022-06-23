@@ -503,7 +503,7 @@ window.BookSeriesIssueItem = Object.extends({
 
 		$li.appendR('<span class="title">')
 			.appendR('<span class="icon">')
-				.css('background-image', 'url(\''+this.bookPublisherDO.getIconUrl()+'\')')
+				.css('background-image', 'url(\''+(this.bookPublisherDO?.getIconUrl() ?? '')+'\')')
 			.parent()
 			.appendR('<span class="text">')
 				.text(this.bookSeriesDO.getName())
