@@ -1060,6 +1060,13 @@
 			getReadDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("readDateSource"); },
 			getPurchasedDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("purchasedDateSource"); },
 			getPreorderDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("preorderDateSource"); },
+			getPreorderOrPurchaseDateSourceMoment: function() {
+				const preorderMoment = this.getPreorderDateSourceMoment();
+				if (preorderMoment) { return preorderMoment; }
+				const purchaseMoment = this.getPurchasedDateSourceMoment();
+				if (purchaseMoment) { return purchaseMoment; }
+				return null;
+			},
 
 			hasNotes: function(){
 				switch(this.getStatus()) {
@@ -2719,7 +2726,6 @@
 						noLocalStoreVolume
 					];
 				}
-
 
 				const graphData = this.getPublicationGraphData();
 

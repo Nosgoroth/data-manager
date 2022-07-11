@@ -243,7 +243,14 @@ class VolumeCollectionIndex {
 	}
 	getLabelAtKey(key) {
 		try {
-			return this.index[key].map(x => x.getFullName() ).join("\n");
+			return this.getLabelsAtKey(key).join("\n");
+		} catch(e) {
+			return null;
+		}
+	}
+	getLabelsAtKey(key) {
+		try {
+			return this.index[key].map(x => x.getFullName() );
 		} catch(e) {
 			return null;
 		}
@@ -308,6 +315,18 @@ class VolumeCollectionByDate {
 	getCountAtYear(key) {
 		return this.yearIndex.getCountAtKey(key);
 	}
+	getLabelsAtMonth(key) {
+		return this.monthIndex.getLabelsAtKey(key);
+	}
+	getLabelsAtYear(key) {
+		return this.yearIndex.getLabelsAtKey(key);
+	}
+	getLabelAtMonth(key) {
+		return this.monthIndex.getLabelAtKey(key);
+	}
+	getLabelAtYear(key) {
+		return this.yearIndex.getLabelAtKey(key);
+	}
 	getGraphPointsByMonth() {
 		return this.monthIndex.getGraphPoints();
 	}
@@ -355,8 +374,11 @@ window.bookSeriesAjaxInterface = Object.extends({
 
 			volumes.forEach(volumeDO => {
 				dateCols.read.add(volumeDO, volumeDO.getReadDateMoment());
+				dateCols.read.add(volumeDO, volumeDO.getReadDateSourceMoment());
 				dateCols.bought.add(volumeDO, volumeDO.getPurchasedDateMoment());
+				dateCols.bought.add(volumeDO, volumeDO.getPurchasedDateSourceMoment());
 				dateCols.preorder.add(volumeDO, volumeDO.getPreorderOrPurchaseDateMoment());
+				dateCols.preorder.add(volumeDO, volumeDO.getPreorderOrPurchaseDateSourceMoment());
 			});
 		});
 
@@ -473,6 +495,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 				.appendR('<th>').text('Month').parent()
 				.appendR('<th>').text('Bought').parent()
 				.appendR('<th>').text('Read').parent()
+				.appendR('<th>').text('Details').parent()
 				;
 			const $tbody = $table.appendR('<tbody>');
 
@@ -482,6 +505,15 @@ window.bookSeriesAjaxInterface = Object.extends({
 					.appendR('<td>').text(monthKey).parent()
 					.appendR('<td>').text(month.bought ?? 0).parent()
 					.appendR('<td>').text(month.read ?? 0).parent()
+					.appendR('<td>')
+						.appendR('<button>')
+							.text("Details")
+							.click(event => {
+								event.preventDefault();
+								event.stopPropagation();
+								alertStatDetailsForMonth(dateCols, monthKey);
+							})
+						.parent().parent()
 					;
 			}
 
@@ -522,3 +554,62 @@ window.bookSeriesAjaxInterface = Object.extends({
 	instance: true,
 	parent: JsonAjaxInterface
 });
+
+function alertStatDetailsForMonth(dateCols, monthKey) {
+	const details = getStatDetailsForMonth(dateCols, monthKey);
+
+	const added_to_backlog = details.added_to_backlog.length 
+		? details.added_to_backlog.join("\n") : "n/a";
+	const read_from_backlog = details.read_from_backlog.length
+		? details.read_from_backlog.join("\n")
+		: "n/a";
+	const bought_and_read = details.bought_and_read.length
+		? details.bought_and_read.join("\n")
+		: "n/a";
+
+	alert(
+		"Read from previous backlog:"
+		+"\n"+read_from_backlog
+		+"\n\n"+"Added to backlog:"
+		+"\n"+added_to_backlog
+		+"\n\n"+"Bought and read:"
+		+"\n"+bought_and_read
+	);
+}
+
+
+function getStatDetailsForMonth(dateCols, monthKey) {
+	const read = dateCols.read.getLabelsAtMonth(monthKey);
+	const bought = dateCols.bought.getLabelsAtMonth(monthKey);
+
+	const added_to_backlog = [];
+	const read_from_backlog = [];
+	const bought_and_read = [];
+
+	read?.forEach(r => {
+		if (bought?.includes(r)) {
+			bought_and_read.push(r);
+		} else {
+			read_from_backlog.push(r);
+		}
+	});
+	bought.forEach(b => {
+		if (!bought_and_read.includes(b)) {
+			added_to_backlog.push(b);
+		}
+	});
+
+	return {
+		monthKey: monthKey,
+		dateCols: dateCols,
+
+		read: read,
+		bought: bought,
+
+		added_to_backlog: added_to_backlog,
+		read_from_backlog: read_from_backlog,
+		bought_and_read: bought_and_read,
+	}
+}
+
+
