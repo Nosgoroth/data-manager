@@ -568,6 +568,7 @@
 						color: white;
 						border-radius: 8px;
 						line-height: 100%;
+						margin: 0 0 1px 0;
 					}
 				}
 				.releaseDate {
@@ -590,7 +591,7 @@
 
 		&[data-status="3"] .content { //Preorder
 			background: #e0ffe3;
-			.statusContainer .status {
+			.statusContainer .volumeStatus {
 				background: #18b118;
 			}
 		}
@@ -599,7 +600,7 @@
 		}
 		&[data-status="4"] .content { //Phys
 			background: #ffdcf4;
-			.statusContainer .status {
+			.statusContainer .volumeStatus {
 				background: #d843aa;
 			}
 
@@ -614,22 +615,33 @@
 
 		&[data-parentstatus="5"] .content, //Consider
 		&[data-parentstatus="8"] .content { //Announced
-			.statusContainer .status {
+			background: #0a3e57;
+			.statusContainer .volumeStatus {
 				opacity: 0.7;
-			}			
+			}
+			.statusContainer .seriesStatus {
+				background: rgba(255,255,255,0.1);
+			}
 		}
 
 		&[data-status="7"] .content {
 			//Available
-			.statusContainer .status {
+			.statusContainer .volumeStatus {
 				background: rgba(0, 0, 0, 0.3);
 			}
 		}
 
 		&[data-status="8"] .content {
 			//StoreWait
-			.statusContainer .status {
+			.statusContainer .volumeStatus {
 				background: #195488;
+			}
+		}
+
+
+		&[data-parentstatus="10"] .content { //Prepub
+			.statusContainer .seriesStatus {
+				background: rgba(0,0,0,0.2);
 			}
 		}
 	}
@@ -777,7 +789,8 @@
 			&[data-status="3"] .content { //Preorder
 				background: #27b469;
 			}
-			&[data-status="3"][data-parentstatus="2"] .content { //Preorder, series is backlogged
+			&[data-status="3"][data-parentstatus="2"] .content,
+			&[data-parentstatus="2"] .content { //Preorder, series is backlogged
 				background: #942e00;
 			}
 			&[data-status="4"] .content { //Phys

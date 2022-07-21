@@ -391,7 +391,8 @@
 		{
 			name: "Seven Seas",
 			link: "https://twitter.com/gomanga",
-			iconUrl: "https://sevenseasentertainment.com/wp-content/uploads/2017/04/cropped-SS-1-180x180.jpg"
+			iconUrl: "https://i.imgur.com/VJVd93E.jpg",
+			iconUrl_old: "https://sevenseasentertainment.com/wp-content/uploads/2017/04/cropped-SS-1-180x180.jpg"
 		},
 		{
 			name: "Other",
@@ -1362,23 +1363,51 @@
 
 				$dataContent.appendR('<p class="title">').text(title);
 
-				const $status = $dataContent.appendR('<p class="statusContainer">').hide().append('<span class="status">');
+				const $status = $dataContent.appendR('<p class="statusContainer">').hide();
+
+				const _addStatus = (text, extraClassName) => {
+					const $statusItem = $status.show()
+						.appendR('<span class="status">')
+						.text(text)
+						;
+					if (extraClassName) {
+						$statusItem.addClass(extraClassName);
+					}
+				};
+				const _addVolumeStatus = (text) => {
+					_addStatus(text, "volumeStatus");
+				};
+				const _addParentStatus = (text) => {
+					_addStatus(text, "seriesStatus");
+				};
+
 				switch(status) {
 					case this.__static.Enum.Status.Preorder:
-						$status.show().find(".status").text("Preordered");
+						_addVolumeStatus("Preordered");
 						break;
 					case this.__static.Enum.Status.Available:
-						$status.show().find(".status").text("Available");
+						_addVolumeStatus("Available");
 						break;
 					case this.__static.Enum.Status.StoreWait:
-						$status.show().find(".status").text("Wait for store");
+						_addVolumeStatus("Wait for store");
 						break;
 					case this.__static.Enum.Status.Phys:
-						$status.show().find(".status").text("Phys");
+						_addVolumeStatus("Phys");
 						break;
 					case this.__static.Enum.Status.Source:
-						$status.show().find(".status").text("JP");
+						_addVolumeStatus("JP");
 						break;
+					default: break;
+				}
+				const BSEnumStatus = BookSeriesDO.Enum.Status;
+				switch(parentStatus) {
+					case BSEnumStatus.Prepub: _addParentStatus("Prepub"); break;
+					case BSEnumStatus.Ended: _addParentStatus("Ended"); break;
+					case BSEnumStatus.Announced: _addParentStatus("Announced"); break;
+					case BSEnumStatus.Consider: _addParentStatus("Consider"); break;
+					//case BSEnumStatus.Drop: _addParentStatus("Drop"); break;
+					//case BSEnumStatus.Stall: _addParentStatus("Stall"); break;
+					//case BSEnumStatus.Unlicensed: _addParentStatus("Unlicensed"); break;
 					default: break;
 				}
 
