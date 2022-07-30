@@ -2665,6 +2665,13 @@
 					return true;
 				}
 
+				if (type === this.ShouldIgnoreIssuesType.Local && options.ignoreLocalIssuesForSeriesWithoutAnyLocalAsin) {
+					const hasLocalVoluesWithAsin = !!this.getVolumes()?.filter(volumeDO => {
+						return !!volumeDO?.getAsin();
+					})?.length;
+					return !hasLocalVoluesWithAsin;
+				}
+
 				return false;
 			},
 
@@ -2686,6 +2693,7 @@
 				
 				return null;
 			},
+
 
 			getIssueLocal: function(options){
 				options = options ? options : {};
