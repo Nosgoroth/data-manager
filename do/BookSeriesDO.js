@@ -329,6 +329,7 @@
 		CancelledAtSource: 12,
 		DelayedReleaseForPreorder: 13,
 		PrintPreorderAwaitingArrival: 14,
+		AwaitingDigitalVersionSource: 15,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -347,6 +348,7 @@
 			case BookSeriesIssue.CancelledAtSource: return 'Assumed cancelled at source';
 			case BookSeriesIssue.DelayedReleaseForPreorder: return 'Delayed release for preorder';
 			case BookSeriesIssue.PrintPreorderAwaitingArrival: return 'Print preorder awaiting arrival';
+			case BookSeriesIssue.AwaitingDigitalVersionSource: return 'Awaiting digital version at source';
 			default: return 'Unknown issue';
 		}
 	}
@@ -619,7 +621,7 @@
 				}
 			},
 
-			getStoreLinkActions: function() {
+			getStoreLinkActions: function(sourceOnly) {
 				const store = this.parent.getStore();
 				const amazonLink = this.getAmazonLink();
 				const amazonJpLink = this.getAmazonJpLink();
@@ -632,13 +634,13 @@
 					values = [
 						{ url: koboLink, label: "View on Kobo", icon: 'icon-book', },
 						{ url: amazonLink, label: "View on Amazon", icon: 'icon-book', },
-						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', },
+						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', source: true },
 					];
 				} else {
 					values = [
 						{ url: amazonLink, label: "View on Amazon", icon: 'icon-book', },
 						{ url: koboLink, label: "View on Kobo", icon: 'icon-book', },
-						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', },
+						{ url: amazonJpLink, label: "View on Amazon JP", icon: 'icon-book', source: true },
 					];
 				}
 				if (store === BookSeriesDO.Enum.Store.JNC) {
@@ -647,7 +649,15 @@
 					);
 				}
 
+				if (sourceOnly) {
+					values = values.filter(x => !!x.source);
+				}
+
 				return values.filter(x => !!x.url);
+			},
+
+			getSourceStoreLinkActions: function() {
+				return this.getStoreLinkActions(true);
 			},
 
 			getAmazonLink: function(){
@@ -1038,6 +1048,9 @@
 			},
 			getReleaseDateSortable: function(){
 				return this.getBestReleaseDateMoment().format("YYYY-MM-DD");
+			},
+			getReleaseDateSourceSortable: function(){
+				return this.getReleaseDateSourceMoment()?.format("YYYY-MM-DD");
 			},
 
 			getAsMoment: function(key, format) {
@@ -2824,6 +2837,19 @@
 					return [BookSeriesIssue.WaitingForSource];
 				}
 
+				const volumes = this.getVolumes();
+
+				for (var i = 0; i < volumes.length; i++) {
+					const volume = volumes[i];
+					if (volume.getStatus() !== BookSeriesVolumeDO.Enum.Status.Source) {
+						continue;
+					}
+					const asin = volume.getSourceAsin();
+					if (asin && !asin.toLowerCase().startsWith("b")) {
+						return [BookSeriesIssue.AwaitingDigitalVersionSource, volume];	
+					}
+				}
+
 				return null;
 
 			},
@@ -2831,6 +2857,7 @@
 			canResolveIssueWithAsin: function(issue) {
 				switch(issue) {
 					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.AwaitingDigitalVersionSource:
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.LocalVolumeOverdue:
@@ -2892,6 +2919,7 @@
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.WaitingForSource:
 					case BookSeriesIssue.SourceVolumeOverdue:
+					case BookSeriesIssue.MissingInformation:
 						return true;
 					case BookSeriesIssue.NoLocalStoreReferences:
 					case BookSeriesIssue.NoSourceStoreReferences:
@@ -2905,8 +2933,18 @@
 				}
 			},
 
-			resolveIssueWithAsin: function(issue, asin) {
+			resolveIssueWithAsin: function(issue, asin, volumeWithIssueDO) {
 				switch(issue) {
+					case BookSeriesIssue.AwaitingDigitalVersionSource:
+						if (!volumeWithIssueDO) {
+							throw new Error("Can't resolve this issue with an ASIN");
+						}
+						if (!asin || !asin.toLowerCase().startsWith("b")) {
+							throw new Error("Invalid or no ASIN");
+						}
+						volumeWithIssueDO.setSourceAsin(asin);
+						this.saveUpdatedVolume(volumeWithIssueDO, true);
+						break;
 					case BookSeriesIssue.AwaitingStoreAvailability:
 						if (this.getStore() !== BookSeriesDO.Enum.Store.Kindle) {
 							throw new Error("Can't resolve this issue with an ASIN");
@@ -3053,8 +3091,23 @@
 						throw new Error('Unknown issue');
 				}
 			},
-			resolveIssueWithReleaseDate: function(issue, releaseDate) {
+			resolveIssueWithReleaseDate: function(issue, releaseDate, volumeDO) {
 				switch(issue) {
+					case BookSeriesIssue.MissingInformation:
+						if (!volumeDO) {
+							throw new Error("Unknown volume with issue");
+						}
+						switch (volumeDO.getStatus()) {
+							case BookSeriesVolumeDO.Enum.Status.Source:
+								volumeDO.setReleaseDateSource(releaseDate);
+								break;
+							default:
+								volumeDO.setReleaseDate(releaseDate);
+								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
+								break;
+						}
+						this.saveUpdatedVolume(volumeDO, true);
+						break;
 					case BookSeriesIssue.WaitingForLocal:
 					case BookSeriesIssue.LocalVolumeOverdue:
 						const firstUnowned = this.getFirstUnownedVolume();

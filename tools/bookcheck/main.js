@@ -14,8 +14,9 @@ window.VolumePhysHandler = Object.extends({
 	kindlePubdate: null,
 	saved: false,
 
-	__construct: function(volumeDO){
+	__construct: function(volumeDO, isSource){
 		this.volumeDO = volumeDO;
+		this._isSource = !!isSource;
 		try {
 			const pubIndex = volumeDO.parent.getPublisher();
 			const pubDO = window.bookPublisherCOL.getByIndex(pubIndex - 1);
@@ -38,25 +39,62 @@ window.VolumePhysHandler = Object.extends({
 		if (!this.volumeDO.getAsin()) {
 			return false;
 		}
+		if (this.volumeDO.getReleaseDateMoment()?.isBefore(moment())) {
+			return false;
+		}
 		return true;
+	},
+
+	isEligiblePhysSource: function() {
+		const asin = this.volumeDO?.getSourceAsin();
+		
+		const retval = !!(asin && !(asin?.toLowerCase()?.startsWith("b")));
+
+
+		if (retval) {
+			if (this.volumeDO.getReleaseDateSourceMoment()?.isBefore(moment())) {
+				return false;
+			}
+		}
+
+		return retval;
 	},
 
 	render: function(baseGenerator){
 		baseGenerator = baseGenerator ? baseGenerator : '<li>';
-		const asin = this.volumeDO.getAsin();
-		const $li = jQuery('<li>');
+		const asin = this._isSource
+			? this.volumeDO.getSourceAsin()
+			: this.volumeDO.getAsin()
+			;
+
+		const phys_url = this._isSource
+			? `https://www.amazon.co.jp/dp/${asin}`
+			: `https://smile.amazon.com/dp/${asin}`;
+
+		const date = this._isSource
+			? this.volumeDO.getReleaseDateSource()
+			: this.volumeDO.getReleaseDate();
+
+		const dateMoment = this._isSource
+			? this.volumeDO.getReleaseDateSourceMoment()
+			: this.volumeDO.getReleaseDateMoment();
+
+
+		const $li = jQuery('<li>').addClass(this._isSource ? "aspect_source" : "aspect_local");
 		$li.appendR('<span class="title">')
+			.appendR('<span class="icon aspectMode">')
+			.parent()
 			.appendR('<span class="icon">')
 				.css('background-image', 'url(\''+this.pubIconUrl+'\')')
 			.parent()
 			.appendR('<a class="name">')
-		    	.attr("href", "https://smile.amazon.com/dp/"+asin)
+		    	.attr("href", phys_url)
 		    	.attr("target", "_blank")
 				.text(this.getName())
 			.parent()
 			.appendR('<span class="date">')
 				.text(
-					`${this.volumeDO.getReleaseDateMoment()?.fromNow()} (${this.volumeDO.getReleaseDate()})`
+					`${dateMoment?.fromNow()} (${date})`
 				)
 			;
 		const $interface = $li.appendR('<span class="interface">');
@@ -110,9 +148,14 @@ window.VolumePhysHandler = Object.extends({
 	},
 
 	setResultAsinButton: function(){
+		const kindle_url = this._isSource
+			? `https://www.amazon.co.jp/dp/${this.kindleAsin}`
+			: `https://smile.amazon.com/dp/${this.kindleAsin}`
+			;
+
 		this.$result.empty().appendR('<a>')
 	    	.addClass("btn btn-mini")
-	    	.attr("href", "https://smile.amazon.com/dp/"+this.kindleAsin)
+	    	.attr("href", kindle_url)
 	    	.attr("target", "_blank")
 	    	.text(this.kindleAsin)
 	    	;
@@ -126,26 +169,40 @@ window.VolumePhysHandler = Object.extends({
 	},
 
 	save: function(status){
-		status = status ? status : BookSeriesVolumeDO.Enum.Status.Available;
-		this.volumeDO.setStatus(status);
+		if (this._isSource) {
+			status = status ? status : BookSeriesVolumeDO.Enum.StatusSource.Available;
+			this.volumeDO.setStatusSource(status);
 
-		if (this.kindleAsin) {
-			this.volumeDO.setAsin(this.kindleAsin);
+			if (this.kindleAsin) {
+				this.volumeDO.setSourceAsin(this.kindleAsin);
+			}
+			if (this.kindlePubdate) {
+		    	var pd = moment(this.kindlePubdate, "MMMM DD, YYYY").format("DD/MM/YYYY")
+		    	this.volumeDO.setReleaseDateSource(pd);
+		    }
+
+		} else {
+			status = status ? status : BookSeriesVolumeDO.Enum.Status.Available;
+			this.volumeDO.setStatus(status);
+
+			if (this.kindleAsin) {
+				this.volumeDO.setAsin(this.kindleAsin);
+			}
+		    
+		    if (this.kindlePubdate) {
+		    	var pd = moment(this.kindlePubdate, "MMMM DD, YYYY").format("DD/MM/YYYY")
+		    	this.volumeDO.setReleaseDate(pd);
+		    }
+
+		    if (this.volumeDO.isManualPhysKindleCheckOnly()) {
+		    	try {
+		    		this.volumeDO.deleteManualPhysKindleCheckOnly();
+		    	} catch (err) {
+		    		this.volumeDO.setManualPhysKindleCheckOnly(false);
+		    	}
+		    	
+		    }
 		}
-	    
-	    if (this.kindlePubdate) {
-	    	var pd = moment(this.kindlePubdate, "MMMM DD, YYYY").format("DD/MM/YYYY")
-	    	this.volumeDO.setReleaseDate(pd);
-	    }
-
-	    if (this.volumeDO.isManualPhysKindleCheckOnly()) {
-	    	try {
-	    		this.volumeDO.deleteManualPhysKindleCheckOnly();
-	    	} catch (err) {
-	    		this.volumeDO.setManualPhysKindleCheckOnly(false);
-	    	}
-	    	
-	    }
 
 	    this.volumeDO.save();
 
@@ -181,6 +238,11 @@ window.VolumePhysHandler = Object.extends({
 			  <ul class="dropdown-menu pull-right text-right"></ul>
 			</div>
 		`).find('ul');
+
+		if (this._isSource) {
+			this.writeActionsSource($dropdownActions);
+			return;
+		}
 
 		if (this.kindleAsin) {
 
@@ -238,6 +300,60 @@ window.VolumePhysHandler = Object.extends({
 
 	},
 
+	writeActionsSource: function($dropdownActions){
+
+		if (this.kindleAsin) {
+
+			this.generateDropdownActionItem('Set as Preorder', null, () => {
+				this.save(BookSeriesVolumeDO.Enum.StatusSource.Preorder);
+			}).appendTo($dropdownActions);
+
+			this.generateDropdownActionItem('Set as Available', null, () => {
+				this.save(BookSeriesVolumeDO.Enum.StatusSource.Available);
+			}).appendTo($dropdownActions);
+
+			this.generateDropdownActionItem('Set as Backlog', null, () => {
+				this.save(BookSeriesVolumeDO.Enum.StatusSource.Backlog);
+			}).appendTo($dropdownActions);
+
+			this.generateDropdownActionItem('Set as Read', null, () => {
+				this.save(BookSeriesVolumeDO.Enum.StatusSource.Read);
+			}).appendTo($dropdownActions);
+
+			jQuery('<li class="divider"></li>').appendTo($dropdownActions);
+
+		}
+
+		this.generateDropdownActionItem('Enter Kindle ASIN', "icon-edit", () => {
+			const kindleAsin = prompt("Enter Kindle ASIN");
+    		if (kindleAsin) {
+    			this.setKindleAsin(kindleAsin);
+    			this.setItemStatusSuccess();
+    			this.writeActions();
+    		}
+		}).appendTo($dropdownActions);
+
+		jQuery('<li class="divider"></li>').appendTo($dropdownActions);
+
+		if (this.volumeDO.isManualPhysKindleCheckOnly()) {
+			this.generateDropdownActionItem('Unset manual only', "icon-ok-sign", () => {
+				this.setItemStatusSuccess();
+				this.saveAsManualCheckOnly(false);
+			}).appendTo($dropdownActions);
+		} else {
+			this.generateDropdownActionItem('Set manual only', "icon-remove-sign", () => {
+				this.setItemStatusSuccess();
+				this.saveAsManualCheckOnly(true);
+			}).appendTo($dropdownActions);	
+		}
+
+		this.generateDropdownActionItem('Run check', "icon-play", () => {
+			this.setQueuedStatus(true);
+			this.process(true);
+		}).appendTo($dropdownActions);
+
+	},
+
 	generateDropdownActionItem: function(label, iconName, action) {
 		const $li = jQuery('<li>');
 		const $a = $li.appendR('<a>')
@@ -255,7 +371,16 @@ window.VolumePhysHandler = Object.extends({
 	},
 
 	getReleaseDateSortable: function(){
+		return this._isSource
+			? this.volumeDO.getReleaseDateSourceSortable()
+			: this.volumeDO.getReleaseDateSortable()
+			;
+	},
+	getReleaseDateLocalSortable: function(){
 		return this.volumeDO.getReleaseDateSortable();
+	},
+	getReleaseDateSourceSortable: function(){
+		return this.volumeDO.getReleaseDateSourceSortable();
 	},
 
 	getName: function() {
@@ -306,6 +431,11 @@ window.VolumePhysHandler = Object.extends({
 			return;
 		}
 
+		const asin = this._isSource
+			? this.volumeDO.getSourceAsin()
+			: this.volumeDO.getAsin()
+			;
+
 
 	    let result;
 	    try {
@@ -313,8 +443,8 @@ window.VolumePhysHandler = Object.extends({
 		    	url: '../../ajax_bookseries.php',
 		    	data: {
 		    		action: "getkindleasin",
-		    		lang: "en",
-		    		asin: this.volumeDO.getAsin(),
+		    		lang: this._isSource ? "jp" : "en",
+		    		asin: asin,
 		    	}
 		    });
 	    } catch (err) {
@@ -369,10 +499,11 @@ window.VolumePhysQueueHandler = Object.extends({
 	$container: null,
 	queue: null,
 
-	__construct: function(volumePhysList, saveCallback, $container){
+	__construct: function(volumePhysList, saveCallback, $container, isSource){
 		this.volumePhysList = volumePhysList;
 		this.saveCallback = saveCallback;
 		this.$container = $container;
+		this._isSource = !!isSource;
 
 		this.queue = async.queue(
 			async (vphys, callback) => this.queueItemAction(vphys, callback),
@@ -421,6 +552,14 @@ window.VolumePhysQueueHandler = Object.extends({
 
 	render: function(){
 		this.$container.empty();
+
+		if (!this.volumePhysList.length) {
+			this.$container.remove();
+			return;
+		}
+
+		
+		this.$container.appendR('<h3>').text("Physical to digital");
 
 
 		const $buttons = this.$container.appendR('<div class="buttons">');
@@ -646,6 +785,7 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
 			case BookSeriesIssue.CancelledAtSource:
+			case BookSeriesIssue.AwaitingDigitalVersionSource:
 				return this.bookSeriesDO.getNextSourceVolumeExpectedDateUncorrected()?.unix() ?? Infinity;
 
 			default:
@@ -700,7 +840,8 @@ window.BookSeriesIssueItem = Object.extends({
 
 			case BookSeriesIssue.LocalVolumeOverdue:
 				return `Vol. ${this.firstUnavailableSourceColorder} overdue ${this.bookSeriesDO.getOverdueText()}`;
-				
+
+			case BookSeriesIssue.AwaitingDigitalVersionSource:
 			case BookSeriesIssue.NoSourceStoreReferences:
 				{
 					if (this.volumeWithIssueDO) {
@@ -749,7 +890,7 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.AwaitingDigitalVersion:
 			case BookSeriesIssue.VolumeAvailable:
 			case BookSeriesIssue.PreorderAvailable:
-				actions = this.firstUnownedVolume?.getStoreLinkActions();
+				actions = this.volumeWithIssueDO?.getStoreLinkActions();
 				if (actions?.length) {
 					actions.push({ divider: true });
 				}
@@ -761,7 +902,7 @@ window.BookSeriesIssueItem = Object.extends({
 				if (actions?.length) {
 					actions.push({ divider: true });
 				}
-				actions = actions.concat(this.firstUnownedVolume?.getStoreLinkActions());
+				actions = actions.concat(this.volumeWithIssueDO?.getStoreLinkActions());
 				break;
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
@@ -780,7 +921,11 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.NoSourceStoreReferences:
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.volumeWithIssueDO.getColorder());
 				break;
+			case BookSeriesIssue.AwaitingDigitalVersionSource:
+				actions = this.volumeWithIssueDO?.getSourceStoreLinkActions();
+				break;
 			case BookSeriesIssue.MissingInformation:
+				
 				actions = [{
 					label: "Scrape info",
 					callback: () => {
@@ -790,7 +935,8 @@ window.BookSeriesIssueItem = Object.extends({
 						}, false);
 						alert("Now scraping...\nClose this message and don't do any more operations until complete.\nYou can see progress information in the console. Press F12 / Ctrl+Shift+i / Cmd+Opt+i to open it.");
 					}
-				}]
+				}];
+				actions = actions.concat(this.volumeWithIssueDO?.getStoreLinkActions());
 				break;
 			default:
 				break;
@@ -841,7 +987,7 @@ window.BookSeriesIssueItem = Object.extends({
 					try {
 						const asin = prompt("ASIN to resolve:");
 						if (!asin) { return; }
-						this.bookSeriesDO.resolveIssueWithAsin(this.issue, asin);
+						this.bookSeriesDO.resolveIssueWithAsin(this.issue, asin, this.volumeWithIssueDO);
 						this.save();
 					} catch(err) {
 						alert(err.message);
@@ -950,7 +1096,7 @@ window.BookSeriesIssueItem = Object.extends({
 							alert('Invalid date format');
 							return;
 						}
-						this.bookSeriesDO.resolveIssueWithReleaseDate(this.issue, releaseDate);
+						this.bookSeriesDO.resolveIssueWithReleaseDate(this.issue, releaseDate, this.volumeWithIssueDO);
 						this.save();
 					} catch(err) {
 						alert(err.message);
@@ -1119,6 +1265,8 @@ window.bookSeriesAjaxInterface = Object.extends({
 		window._ajaxBookseriesUri = "../../ajax_bookseries.php";
 		
 		const vphyss = [];
+		const vphyss_local = [];
+		const vphyss_src = [];
 		let issues = [];
 
 		const issuesOptions = this.getIssuesOptions();
@@ -1142,6 +1290,12 @@ window.bookSeriesAjaxInterface = Object.extends({
 				const vphys = new VolumePhysHandler(volumeDO);
 				if (vphys.isEligiblePhys()) {
 					vphyss.push(vphys);
+					vphyss_local.push(vphys);
+				}
+				const vphys_src = new VolumePhysHandler(volumeDO, true);
+				if (vphys_src.isEligiblePhysSource()) {
+					vphyss.push(vphys_src);
+					vphyss_src.push(vphys_src);
 				}
 			});
 		});
@@ -1153,6 +1307,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 			
 			const $physdigital = jQuery("#physdigital-app").empty();
 			
+			
 			window._vphysq = new VolumePhysQueueHandler(vphyss, () => {
 				this.jsonAjaxSave(async () => {
 					this.rerender();
@@ -1160,7 +1315,25 @@ window.bookSeriesAjaxInterface = Object.extends({
 					alert("Error: couldn't save");
 				});
 			}, $physdigital);
+			
 		}
+		/*
+		{
+			vphyss_src.sort((a,b)=>{
+				return a.getReleaseDateSourceSortable().localeCompare(b.getReleaseDateSourceSortable());
+			});
+			
+			const $physdigital = jQuery("#physdigitalsrc-app").empty();
+			
+			window._vphysq_src = new VolumePhysQueueHandler(vphyss_src, () => {
+				this.jsonAjaxSave(async () => {
+					this.rerender();
+				}, () => {
+					alert("Error: couldn't save");
+				});
+			}, $physdigital, true);
+		}
+		*/
 		
 
 		{
@@ -1212,6 +1385,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 				BookSeriesIssue.WaitingForLocal,
 				BookSeriesIssue.LocalVolumeOverdue,
 				BookSeriesIssue.NoSourceStoreReferences,
+				// BookSeriesIssue.AwaitingDigitalVersionSource,
 				BookSeriesIssue.WaitingForSource,
 				BookSeriesIssue.SourceVolumeOverdue,
 				BookSeriesIssue.CancelledAtSource,

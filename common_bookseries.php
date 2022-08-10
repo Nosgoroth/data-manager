@@ -68,6 +68,18 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		}
 	}
 
+
+	function extractKindleAsin() {
+		$matches = null;
+		preg_match("/data-tmm-see-more-editions-click=\"(\{.*\})\"/", $this->raw, $matches);
+		if (!$matches || count($matches) < 2) { return null;  }
+		$editions = json_decode(html_entity_decode($matches[1]), true);
+		if (!isset($editions["metabindingUrl"])) { return null; }
+		preg_match("/dp\/(B[\d\w]*)\//", $editions["metabindingUrl"], $matches);
+		if (!$matches || count($matches) < 2) { return null; }
+		return $matches[1];
+	}
+
 	function extractPubDate(){
 		mb_internal_encoding('UTF-8');
 		//$this->raw = '<span class="a-text-bold">出版社 &rlm; : &lrm;</span> <span> KADOKAWA (2016/1/25)</span>';
