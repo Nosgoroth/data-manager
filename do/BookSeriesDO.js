@@ -1394,25 +1394,44 @@
 					_addStatus(text, "seriesStatus");
 				};
 
+				const BSEnumStatus = BookSeriesDO.Enum.Status;
+				const BSVEnumStatus = this.__static.Enum.Status;
+				const BSVEnumStatusSource = this.__static.Enum.StatusSource;
+
 				switch(status) {
-					case this.__static.Enum.Status.Preorder:
+					case BSVEnumStatus.Preorder:
 						_addVolumeStatus("Preordered");
 						break;
-					case this.__static.Enum.Status.Available:
+					case BSVEnumStatus.Available:
 						_addVolumeStatus("Available");
 						break;
-					case this.__static.Enum.Status.StoreWait:
+					case BSVEnumStatus.StoreWait:
 						_addVolumeStatus("Wait for store");
 						break;
-					case this.__static.Enum.Status.Phys:
+					case BSVEnumStatus.Phys:
 						_addVolumeStatus("Phys");
 						break;
-					case this.__static.Enum.Status.Source:
+					case BSVEnumStatus.Source:
 						_addVolumeStatus("JP");
 						break;
 					default: break;
 				}
-				const BSEnumStatus = BookSeriesDO.Enum.Status;
+				if (status === BSVEnumStatus.Source) {
+					switch(statusSource) {
+						case BSVEnumStatus.Preorder:
+							_addVolumeStatus("Preordered");
+							break;
+						case BSVEnumStatus.Available:
+							_addVolumeStatus("Available");
+							break;
+						default:
+							if (!this.getSourceAsin()?.toLowerCase().startsWith("b")) {
+								_addVolumeStatus("Phys");
+							}
+							break;
+					}
+				}
+				
 				switch(parentStatus) {
 					case BSEnumStatus.Prepub: _addParentStatus("Prepub"); break;
 					case BSEnumStatus.Ended: _addParentStatus("Ended"); break;
@@ -2558,6 +2577,20 @@
 				})[0];
 			},
 
+			getFirstOwnedVolumeSource: function() {
+				const volumesCOL = this.getVolumes();
+				return volumesCOL.filter(x => {
+					if (x.isTreatAsNotSequential()) {
+						return false;
+					}
+					const st = x.getStatusSource();
+					return ([
+						BookSeriesVolumeDO.Enum.StatusSource.Read,
+						BookSeriesVolumeDO.Enum.StatusSource.Backlog,
+					].includes(st));
+				})[0];
+			},
+
 			getFirstUnavailableSourceVolume: function() {
 				const volumesCOL = this.getVolumes();
 				return volumesCOL.filter(x => {
@@ -2716,6 +2749,11 @@
 				}
 
 				if (this.getIssueMissingInformation(options)) {
+					return null;
+				}
+
+				const lang = this.getLang();
+				if (lang === BookSeriesDO.Enum.Lang.JP) {
 					return null;
 				}
 
@@ -4053,8 +4091,9 @@
 
 				var $container = jQuery('<div class="bookSeriesTiles">');
 
-				var BSEnumStatus = BookSeriesDO.Enum.Status;
-				var BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+				const BSEnumStatus = BookSeriesDO.Enum.Status;
+				const BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+				const BSVEnumStatusSource = BookSeriesVolumeDO.Enum.StatusSource;
 
 				var volumesCOL = [];
 				this._COL.forEach(function(bookSeriesDO){
@@ -4064,7 +4103,16 @@
 						return;
 					}
 
-					Array.prototype.push.apply(volumesCOL,bookSeriesDO.getVolumes());
+					const seriesVolumesCOL = bookSeriesDO.getVolumes();
+
+					const firstOwnedVolumeSourceDO = bookSeriesDO.getFirstOwnedVolumeSource();
+					if (firstOwnedVolumeSourceDO) {
+						for (var i = 0; i < seriesVolumesCOL.length; i++) {
+							seriesVolumesCOL[i].__firstOwnedVolumeSourceDO = firstOwnedVolumeSourceDO;
+						}
+					}
+
+					Array.prototype.push.apply(volumesCOL,seriesVolumesCOL);
 				});
 				volumesCOL = BookSeriesVolumeDO.COL(volumesCOL);
 
@@ -4077,9 +4125,14 @@
 					if (!_d || !_d.isValid() || _d.isBefore(_now)) {
 						return;
 					}
-					var status = volumeDO.getStatus();
+					const status = volumeDO.getStatus();
 
-					if ([BSVEnumStatus.Read, BSVEnumStatus.Backlog, BSVEnumStatus.Source].includes(status)) {
+					if ([BSVEnumStatus.Read, BSVEnumStatus.Backlog].includes(status)) {
+						return;
+					}
+
+					// Don't show upcoming if don't own any source volume
+					if (status === BSVEnumStatus.Source && !volumeDO.__firstOwnedVolumeSourceDO) {
 						return;
 					}
 
