@@ -1302,7 +1302,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 		
 		{
 			vphyss.sort((a,b)=>{
-				return a.getReleaseDateSortable().localeCompare(b.getReleaseDateSortable());
+				return a.getReleaseDateSortable()?.localeCompare(b.getReleaseDateSortable());
 			});
 			
 			const $physdigital = jQuery("#physdigital-app").empty();
@@ -1317,23 +1317,6 @@ window.bookSeriesAjaxInterface = Object.extends({
 			}, $physdigital);
 			
 		}
-		/*
-		{
-			vphyss_src.sort((a,b)=>{
-				return a.getReleaseDateSourceSortable().localeCompare(b.getReleaseDateSourceSortable());
-			});
-			
-			const $physdigital = jQuery("#physdigitalsrc-app").empty();
-			
-			window._vphysq_src = new VolumePhysQueueHandler(vphyss_src, () => {
-				this.jsonAjaxSave(async () => {
-					this.rerender();
-				}, () => {
-					alert("Error: couldn't save");
-				});
-			}, $physdigital, true);
-		}
-		*/
 		
 
 		{
