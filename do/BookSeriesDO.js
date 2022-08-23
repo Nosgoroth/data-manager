@@ -2577,8 +2577,8 @@
 				})[0];
 			},
 
-			getFirstOwnedVolumeSource: function() {
-				const volumesCOL = this.getVolumes();
+			getFirstOwnedVolumeSource: function(volumesCOL) {
+				volumesCOL = volumesCOL ? volumesCOL : this.getVolumes();
 				return volumesCOL.filter(x => {
 					if (x.isTreatAsNotSequential()) {
 						return false;
@@ -3822,14 +3822,20 @@
 				var volumesCOL = this.getVolumes();
 				if (volumesCOL.length > 0) {
 					read = 0; owned = 0; preordered = 0; available = 0;
-					var earliestPreorder = null;
-					var earliestPreorderIsPhys = false;
-					var earliestPreorderIsSource = false;
-					var earliestPreorderIsSW = false;
-					for (var i = 0; i < volumesCOL.length; i++) {
-						var volumeDO = volumesCOL[i];
+					let earliestPreorder = null;
+					let earliestPreorderIsPhys = false;
+					let earliestPreorderIsSource = false;
+					let earliestPreorderIsSW = false;
+					let earliestPreorderIsSourcePreorder = false;
 
-						var status = volumeDO.getStatus();
+					const lang = this.getLang();
+					const firstOwnedVolumeSourceDO = this.getFirstOwnedVolumeSource(volumesCOL);
+
+					for (var i = 0; i < volumesCOL.length; i++) {
+						const volumeDO = volumesCOL[i];
+
+						const status = volumeDO.getStatus();
+						const sourceStatus = volumeDO.getStatusSource();
 
 						switch (status) {
 							case BookSeriesVolumeDO.Enum.Status.Read:
@@ -3851,17 +3857,38 @@
 							case BookSeriesVolumeDO.Enum.Status.Phys:
 							case BookSeriesVolumeDO.Enum.Status.Source:
 								
-								var _release = volumeDO.getBestReleaseDateMoment();
+								let _release = volumeDO.getBestReleaseDateMoment();
 
-								if (!_release.isValid()) {
-									break;
-								}
+								if (!_release || !_release.isValid()) { break; }
+
 								
-								var currentIsPhys = (status===BookSeriesVolumeDO.Enum.Status.Phys),
-									currentIsSource = (status===BookSeriesVolumeDO.Enum.Status.Source),
-									currentIsSW = (status===BookSeriesVolumeDO.Enum.Status.StoreWait),
-									currentIsEarlier = _release.isBefore(earliestPreorder)
-									;
+								const currentIsPhys = (status===BookSeriesVolumeDO.Enum.Status.Phys);
+								const currentIsSW = (status===BookSeriesVolumeDO.Enum.Status.StoreWait);
+								const currentIsEarlier = _release.isBefore(earliestPreorder);
+								let currentIsSource = (status===BookSeriesVolumeDO.Enum.Status.Source);
+								let currentIsSourcePreorder = false;
+
+								// If this is actually preordered in source, then we won't consider it a source volume
+								if (currentIsSource && (
+									sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder
+									|| lang === BookSeriesDO.Enum.Lang.JP
+								)) {
+									currentIsSource = false;
+									currentIsSourcePreorder = true;
+									_release = volumeDO.getReleaseDateSourceMoment();
+									if (!_release || !_release.isValid()) { break; }
+								}
+
+								/*
+								console.log(
+									volumeDO.getColorder(),
+									_release.format("DD/MM/YYYY"),
+									`currentIsSource: ${ currentIsSource ? "true" : "false" }`,
+									`currentIsSourcePreorder: ${ currentIsSourcePreorder ? "true" : "false" }`,
+									`source preorder: ${ sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder ? "true" : "false" }`,
+									`lang JP: ${ lang === BookSeriesDO.Enum.Lang.JP ? "true" : "false" }`,
+								);
+								*/
 
 								if (
 									// We have none saved yet
@@ -3876,6 +3903,7 @@
 									earliestPreorderIsPhys = currentIsPhys;
 									earliestPreorderIsSource = currentIsSource;
 									earliestPreorderIsSW = currentIsSW;
+									earliestPreorderIsSourcePreorder = currentIsSourcePreorder;
 								}
 
 								break;
@@ -3893,6 +3921,8 @@
 							text += " SW";
 						} else if (earliestPreorderIsSource) {
 							text = "JP "+text;
+						} else if (earliestPreorderIsSourcePreorder) {
+							text += " JP";
 						}
 						this.setNotes(text);
 					} else {
