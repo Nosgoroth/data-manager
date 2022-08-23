@@ -1284,15 +1284,20 @@ window.bookSeriesAjaxInterface = Object.extends({
 				issues.push(issueobj);
 			}
 
+			// If print series, don't add to VolumePhysHandler
+			if (bookSeriesDO.getName()?.toLowerCase().includes("(print)")) {
+				return;
+			}
+
 			const volumes = bookSeriesDO.getVolumes();
 
 			volumes.forEach(volumeDO => {
 				const vphys = new VolumePhysHandler(volumeDO);
+				const vphys_src = new VolumePhysHandler(volumeDO, true);
 				if (vphys.isEligiblePhys()) {
 					vphyss.push(vphys);
 					vphyss_local.push(vphys);
 				}
-				const vphys_src = new VolumePhysHandler(volumeDO, true);
 				if (vphys_src.isEligiblePhysSource()) {
 					vphyss.push(vphys_src);
 					vphyss_src.push(vphys_src);
