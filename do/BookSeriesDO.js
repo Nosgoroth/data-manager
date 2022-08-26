@@ -3804,7 +3804,9 @@
 				window.customMultiDataObjectEditor.saveAndUpdate();
 			},
 			*/
-			onChange: function(){
+			onChange: function(debug){
+				// To trigger debug, call this method manually from console with parameter. Like:
+				//     BookSeriesDO.getSeriesByName("Private Tutor").onChange(true)
 				var read, owned, preordered, available;
 
 				const seriesStatus = this.getStatus();
@@ -3819,6 +3821,17 @@
 				];
 				let isStatusSticky = (stickyStatuses.indexOf(seriesStatus) !== -1);
 
+				const lang = this.getLang();
+
+				if (debug) {
+					console.group("onChange");
+					console.log("◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
+					console.log(
+						"⚠️ " + this.getName(),
+						"lang="+(lang ? BookSeriesDO.enumLabelOfLangValue(lang) : "N/A"),
+					);
+				}
+
 				var volumesCOL = this.getVolumes();
 				if (volumesCOL.length > 0) {
 					read = 0; owned = 0; preordered = 0; available = 0;
@@ -3827,8 +3840,7 @@
 					let earliestPreorderIsSource = false;
 					let earliestPreorderIsSW = false;
 					let earliestPreorderIsSourcePreorder = false;
-
-					const lang = this.getLang();
+					
 					const firstOwnedVolumeSourceDO = this.getFirstOwnedVolumeSource(volumesCOL);
 
 					for (var i = 0; i < volumesCOL.length; i++) {
@@ -3837,15 +3849,36 @@
 						const status = volumeDO.getStatus();
 						const sourceStatus = volumeDO.getStatusSource();
 
+						let consoleLogItems = [
+							volumeDO.getColorder(),
+							volumeDO.getBestReleaseDateMoment()?.format("DD/MM/YYYY"),
+							"S="+BookSeriesVolumeDO.enumLabelOfStatusValue(status),
+							"SS="+BookSeriesVolumeDO.enumLabelOfStatusSourceValue(sourceStatus),
+						];
+						let willUpdate = false;
+
 						switch (status) {
 							case BookSeriesVolumeDO.Enum.Status.Read:
 								available += 1;
 								owned += 1;
 								read += 1;
+
+
 								break;
 							case BookSeriesVolumeDO.Enum.Status.Backlog:
 								available += 1;
 								owned += 1;
+
+								if (debug) {
+									console.log(
+										volumeDO.getColorder(),
+										volumeDO.getBestReleaseDateMoment()?.format("DD/MM/YYYY"),
+										"S="+BookSeriesVolumeDO.enumLabelOfStatusValue(status),
+										"SS="+BookSeriesVolumeDO.enumLabelOfStatusSourceValue(sourceStatus),
+										"[skip]",
+									);
+								}
+
 								break;
 							case BookSeriesVolumeDO.Enum.Status.Preorder:
 								preordered += 1;
@@ -3860,7 +3893,6 @@
 								let _release = volumeDO.getBestReleaseDateMoment();
 
 								if (!_release || !_release.isValid()) { break; }
-
 								
 								const currentIsPhys = (status===BookSeriesVolumeDO.Enum.Status.Phys);
 								const currentIsSW = (status===BookSeriesVolumeDO.Enum.Status.StoreWait);
@@ -3879,17 +3911,6 @@
 									if (!_release || !_release.isValid()) { break; }
 								}
 
-								/*
-								console.log(
-									volumeDO.getColorder(),
-									_release.format("DD/MM/YYYY"),
-									`currentIsSource: ${ currentIsSource ? "true" : "false" }`,
-									`currentIsSourcePreorder: ${ currentIsSourcePreorder ? "true" : "false" }`,
-									`source preorder: ${ sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder ? "true" : "false" }`,
-									`lang JP: ${ lang === BookSeriesDO.Enum.Lang.JP ? "true" : "false" }`,
-								);
-								*/
-
 								if (
 									// We have none saved yet
 									!earliestPreorder
@@ -3899,6 +3920,16 @@
 									// Or the current one is not earlier but the one we have is a source and this isn't
 									|| (earliestPreorderIsSource && !currentIsSource)
 									) {
+									willUpdate = true;
+								}
+
+								if (debug) {
+									consoleLogItems.push(`currentIsSource: ${ currentIsSource ? "true" : "false" }`);
+									consoleLogItems.push(`currentIsSourcePreorder: ${ currentIsSourcePreorder ? "true" : "false" }`);
+									consoleLogItems.push(`earliestPreorderIsSource: ${ earliestPreorderIsSource ? "true" : "false" }`);
+								}
+
+								if (willUpdate) {
 									earliestPreorder = _release;
 									earliestPreorderIsPhys = currentIsPhys;
 									earliestPreorderIsSource = currentIsSource;
@@ -3908,7 +3939,17 @@
 
 								break;
 							case BookSeriesVolumeDO.Enum.Status.None:
-							default: break;
+							default:
+								if (debug) {
+									consoleLogItems.push("INVALID STATUS");
+								}
+								break;
+						}
+
+
+						if (debug) {
+							consoleLogItems.push((willUpdate ? "[WILL UPDATE]" : "[skip]"));
+							console.log.apply(this, consoleLogItems);
 						}
 					}
 					this.setOwned(owned); this.setRead(read); this.setPrecount(preordered);
@@ -3964,6 +4005,12 @@
 
 				//Set preorder bool
 				this.setPreorder( !!(preordered>0) );
+
+				if (debug) {
+					console.log("👉 Final notes:", this.getNotes());
+					console.log("◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
+					console.groupEnd();
+				}
 			}
 		},
 
