@@ -170,8 +170,9 @@ window.VolumePhysHandler = Object.extends({
 
 	save: function(status){
 		if (this._isSource) {
-			status = status ? status : BookSeriesVolumeDO.Enum.StatusSource.Available;
-			this.volumeDO.setStatusSource(status);
+			if (status) {
+				this.volumeDO.setStatusSource(status);
+			}
 
 			if (this.kindleAsin) {
 				this.volumeDO.setSourceAsin(this.kindleAsin);
@@ -182,8 +183,9 @@ window.VolumePhysHandler = Object.extends({
 		    }
 
 		} else {
-			status = status ? status : BookSeriesVolumeDO.Enum.Status.Available;
-			this.volumeDO.setStatus(status);
+			if (status) {
+				this.volumeDO.setStatus(status);
+			}
 
 			if (this.kindleAsin) {
 				this.volumeDO.setAsin(this.kindleAsin);
@@ -246,6 +248,10 @@ window.VolumePhysHandler = Object.extends({
 
 		if (this.kindleAsin) {
 
+			this.generateDropdownActionItem('Save as-is', null, () => {
+				this.save(null);
+			}).appendTo($dropdownActions);
+
 			this.generateDropdownActionItem('Set as Preorder', null, () => {
 				this.save(BookSeriesVolumeDO.Enum.Status.Preorder);
 			}).appendTo($dropdownActions);
@@ -303,6 +309,10 @@ window.VolumePhysHandler = Object.extends({
 	writeActionsSource: function($dropdownActions){
 
 		if (this.kindleAsin) {
+
+			this.generateDropdownActionItem('Save as-is', null, () => {
+				this.save(null);
+			}).appendTo($dropdownActions);
 
 			this.generateDropdownActionItem('Set as Preorder', null, () => {
 				this.save(BookSeriesVolumeDO.Enum.StatusSource.Preorder);
