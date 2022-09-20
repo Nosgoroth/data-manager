@@ -840,7 +840,7 @@ window.BookSeriesIssueItem = Object.extends({
 					if (nextVolumeDate) {
 						return `Vol. ${nextVolumeColorder} in about ${nextVolumeDate}, prev ${prevVolumeDate}`;
 					} else {
-						return `Vol. ${prevVolumeColorder} was last ${prevVolumeDate}`
+						return `Vol. ${prevVolumeColorder} published ${prevVolumeDate}`;
 					}
 				}
 				{
@@ -872,7 +872,7 @@ window.BookSeriesIssueItem = Object.extends({
 					if (nextVolumeDate) {
 						return `Vol. ${nextVolumeColorder} in about ${nextVolumeDate}, prev ${prevVolumeDate}`;
 					} else {
-						return `Vol. ${prevVolumeColorder} was last ${prevVolumeDate}`
+						return `Vol. ${prevVolumeColorder} published ${prevVolumeDate}`;
 					}
 				}
 				{
