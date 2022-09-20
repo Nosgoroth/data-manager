@@ -330,6 +330,7 @@
 		DelayedReleaseForPreorder: 13,
 		PrintPreorderAwaitingArrival: 14,
 		AwaitingDigitalVersionSource: 15,
+		AnnouncedSeriesAvailable: 16,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -349,6 +350,7 @@
 			case BookSeriesIssue.DelayedReleaseForPreorder: return 'Delayed release for preorder';
 			case BookSeriesIssue.PrintPreorderAwaitingArrival: return 'Print preorder awaiting arrival';
 			case BookSeriesIssue.AwaitingDigitalVersionSource: return 'Awaiting digital version at source';
+			case BookSeriesIssue.AnnouncedSeriesAvailable: return 'Announced series available';
 			default: return 'Unknown issue';
 		}
 	}
@@ -1390,6 +1392,9 @@
 				const _addVolumeStatus = (text) => {
 					_addStatus(text, "volumeStatus");
 				};
+				const _addVolumeNote = (text) => {
+					_addStatus(text, "volumeNote");
+				};
 				const _addParentStatus = (text) => {
 					_addStatus(text, "seriesStatus");
 				};
@@ -1412,7 +1417,7 @@
 						_addVolumeStatus("Phys");
 						break;
 					case BSVEnumStatus.Source:
-						_addVolumeStatus("JP");
+						_addVolumeNote("JP");
 						break;
 					default: break;
 				}
@@ -2792,6 +2797,17 @@
 				}
 
 				if (
+					parseInt(firstUnowned?.getColorder()) === 1
+					&& seriesStatus === BookSeriesDO.Enum.Status.Announced
+				) {
+					const releaseDate = firstUnowned.getReleaseDateMoment();
+					const now = moment();
+					if (releaseDate && !releaseDate?.isAfter(now)) {
+						return [BookSeriesIssue.AnnouncedSeriesAvailable, firstUnowned];
+					}
+				}
+
+				if (
 					firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Available
 					&& seriesStatus !== BookSeriesDO.Enum.Status.Backlog
 				) {
@@ -4164,7 +4180,8 @@
 
 
 			_defaultRender: window.DataObjectCollectionEditor.prototype.render,
-			_tileRenderUpcoming: function(){
+			_tileRenderUpcoming: function(upcomingMode){
+				upcomingMode = upcomingMode ? upcomingMode : "week";
 
 				var $container = jQuery('<div class="bookSeriesTiles">');
 
@@ -4183,10 +4200,11 @@
 					const seriesVolumesCOL = bookSeriesDO.getVolumes();
 
 					const firstOwnedVolumeSourceDO = bookSeriesDO.getFirstOwnedVolumeSource();
-					if (firstOwnedVolumeSourceDO) {
-						for (var i = 0; i < seriesVolumesCOL.length; i++) {
-							seriesVolumesCOL[i].__firstOwnedVolumeSourceDO = firstOwnedVolumeSourceDO;
-						}
+					
+					for (var i = 0; i < seriesVolumesCOL.length; i++) {
+						seriesVolumesCOL[i].__parentStatus = status;
+						seriesVolumesCOL[i].__seriesVolumesCOL = seriesVolumesCOL;
+						seriesVolumesCOL[i].__firstOwnedVolumeSourceDO = firstOwnedVolumeSourceDO;
 					}
 
 					Array.prototype.push.apply(volumesCOL,seriesVolumesCOL);
@@ -4209,11 +4227,35 @@
 					}
 
 					// Don't show upcoming if don't own any source volume
-					if (status === BSVEnumStatus.Source && !volumeDO.__firstOwnedVolumeSourceDO) {
+					if (
+						status === BSVEnumStatus.Source
+						&& !(
+							volumeDO.__firstOwnedVolumeSourceDO
+							|| (
+								volumeDO.__parentStatus === BSEnumStatus.Announced
+								&& volumeDO.getColorder() === 1
+							)
+						)
+						) {
 						return;
 					}
 
-					var monthkey = moment(_d).startOf('isoWeek').format("YYYY-WW");
+					let monthKey = null;
+
+					switch(upcomingMode) {
+						case "list":
+							monthkey = "_";
+							break;
+						case "month":
+							monthkey = moment(_d).format("YYYY-MM");
+							break;
+						case "week":
+						default:
+							monthkey = moment(_d).startOf('isoWeek').format("YYYY-WW");
+							break;
+					}
+
+					
 					if (!months[monthkey]) {
 						months[monthkey] = {
 							volumes: [],
@@ -4239,7 +4281,7 @@
 					var volumesCOL = BookSeriesVolumeDO.COL(_month.volumes);
 					BookSeriesVolumeDO.sortByReleaseDate(volumesCOL);
 
-					if (_monthPrev) {
+					if (upcomingMode === "week" && _monthPrev) {
 						const weekNumber = _month.weekNumber;
 						let prevWeekNumber = _monthPrev.weekNumber
 						if (_monthPrev.year < _month.year) {
@@ -4258,7 +4300,22 @@
 
 					var $month = $container.appendR('<div class="bookSeriesTilesMonth">');
 
-					$month.appendR('<h3>').text(_month.weekStart + " -  " + _month.weekEnd + " " + _month.year + " (Week "+_month.weekNumber+")");
+					let title = null;
+
+					switch(upcomingMode) {
+						case "list":
+							title = "All upcoming volumes"
+							break;
+						case "month":
+							title = _month.monthName + " " + _month.year;
+							break;
+						case "week":
+						default:
+							title = _month.weekStart + " -  " + _month.weekEnd + " " + _month.year + " (Week "+_month.weekNumber+")";
+							break;
+					}
+
+					$month.appendR('<h3>').text(title);
 					var $tiles = $month.appendR('<ul class="monthTiles">');
 
 					volumesCOL.forEach(function(volumeDO){
@@ -4519,8 +4576,8 @@
 
 
 			render: function(){
-				var renderMode = this.getExtraValueByKey("rendermode");
-				renderMode = renderMode ? renderMode : "table";
+				const renderMode = this.getExtraValueByKey("rendermode", "table");
+				const upcomingMode = this.getExtraValueByKey("upcomingmode", "week");
 
 				switch(renderMode) {
 					default:
@@ -4528,7 +4585,7 @@
 						this._defaultRender();
 						break;
 					case "volumetiles_upcoming":
-						this._tileRenderUpcoming();
+						this._tileRenderUpcoming(upcomingMode);
 						break;
 					case "volumetiles_backlog":
 						this._tileRenderBacklog();
@@ -4558,6 +4615,22 @@
 						this.render();
 					}.bind(this))
 					;
+
+				if (renderMode === "volumetiles_upcoming") {
+					const $upcomingMode = $topRow.appendR('<span class="form-inline">')
+					.appendR('<select>')
+						.append('<option value="week">By week</option>')
+						.append('<option value="month">By month</option>')
+						.append('<option value="list">Single list</option>')
+					.val(upcomingMode)
+					.css({ width: "100px"})
+					.on('change', function(){
+						this.setExtraValue("upcomingmode", $upcomingMode.val());
+						window.customMultiDataObjectEditor.updateBrowserUri();
+						this.render();
+					}.bind(this))
+					;
+				}
 
 				$topRow.appendR('<a class="btn">')
 					.attr("href", "./tools/bookcheck/")

@@ -409,8 +409,8 @@ window.CustomDataObjectEditor = Object.extends({
 	getExtraValues: function(){
 		return Object.shallowExtend(this.extraValues);
 	},
-	getExtraValueByKey: function(key){
-		return this.extraValues[key];
+	getExtraValueByKey: function(key, defaultValue){
+		return this.extraValues[key] ? this.extraValues[key] : defaultValue;
 	},
 	setExtraValue: function(key, val){
 		this.extraValues[key] = val;

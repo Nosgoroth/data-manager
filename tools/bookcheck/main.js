@@ -934,6 +934,27 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.AwaitingDigitalVersionSource:
 				actions = this.volumeWithIssueDO?.getSourceStoreLinkActions();
 				break;
+			case BookSeriesIssue.AnnouncedSeriesAvailable:
+				actions = this.volumeWithIssueDO?.getStoreLinkActions();
+				actions.push({ divider: true });
+				actions = actions.concat([
+					{
+						label: "Set backlog",
+						callback: () => {
+							this.volumeWithIssueDO?.setStatus(BookSeriesVolumeDO.Enum.Status.Backlog);
+							this.volumeWithIssueDO.parent.saveUpdatedVolume(this.volumeWithIssueDO, true);
+							this.save();
+						}
+					},
+					{
+						label: "Set series consider",
+						callback: () => {
+							this.bookSeriesDO.setStatus(BookSeriesDO.Enum.Status.Consider);
+							this.save();
+						}
+					}
+				]);
+				break;
 			case BookSeriesIssue.MissingInformation:
 				
 				actions = [{
@@ -1373,6 +1394,7 @@ window.bookSeriesAjaxInterface = Object.extends({
 			const existingIssueTypesUnsorted = Object.keys(issuesSorted).map(x => parseInt(x));
 			const existingIssueTypes = [
 				BookSeriesIssue.DelayedReleaseForPreorder,
+				BookSeriesIssue.AnnouncedSeriesAvailable,
 				BookSeriesIssue.PrintPreorderAwaitingArrival,
 				BookSeriesIssue.MissingInformation,
 				BookSeriesIssue.VolumeAvailable,
