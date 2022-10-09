@@ -3,6 +3,9 @@
 
 	To grab a whole series from Amazon from developer console:
 
+		// Digital (Amazon JP)
+		[...document.querySelectorAll("a.itemBookTitle")].map((x,i) => (i+1)+';'+x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")+";6").join("\n")
+
 		// Digital
 		[...document.querySelectorAll("a.itemBookTitle")].map(x => x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")).join("\n ")
 
@@ -2121,8 +2124,8 @@
 				hideFields: [
 					"releaseDateHistory", "ibooksId", "bookwalkerJpId", "isbn",
 					"mangaCalendarId", "mangaCalendarEnabled",
-					"preorderDate", "purchasedDate", "readDate",
-					"preorderDateSource", "purchasedDateSource", "readDateSource",
+					"preorderDate", // "purchasedDate", "readDate",
+					"preorderDateSource", // "purchasedDateSource", "readDateSource",
 				]
 			},
 
