@@ -1,7 +1,60 @@
 (function(){
 	/*
 
-	To grab a whole series from Amazon from developer console:
+	## To query from console
+
+		Some quick examples:
+
+			BookSeriesDO.getAllVolumes().filterByDateAfterOrEqual("readDate", "2022-10-01").filterByDateBefore("readDate", "2022-11-01").runAndJoin("getFullName")
+
+			BookSeriesDO.getSeriesByName("angel next door").getVolumes().map(x => x.getFullName()+" - "+x.getReleaseDate()).join("\n")
+
+		Useful static methods in BookSeriesDO:
+
+			BookSeriesDO.getAllSeries() // Gets a DataObjectCollection of all BookSeriesDO
+			BookSeriesDO.getAllVolumes() // Gets a DataObjectCollection of BookSeriesVolumeDO of all series
+			BookSeriesDO.getSeriesByName(nameFragment) // like "angel next door"; returns one DataObjectCollection
+
+		Useful methods on a BookSeriesDO:
+
+			series.getVolumes() // Gets a DataObjectCollection of BookSeriesVolumeDO of this series
+
+			(There is an automatic getX method for each property X that returns the correct type)
+			series.getName() // Returns the property "name"
+
+		You can access Enum collections, like Status, from:
+
+			BookSeriesDO.Enum.Status.Backlog // This is the integer 2
+
+			You can use that for filtering. For example, number of series with status Backlog:
+
+			BookSeriesDO.getAllSeries().filterByEquals("getStatus", BookSeriesDO.Enum.Status.Backlog).length
+
+		Filters for DataObjectCollection. They all return a new DataObjectCollection.
+
+			filterByEquals(property, value)
+			filterByLessThan(property, value)
+			filterByLessThanOrEqual(property, value)
+			filterByGreaterThan(property, value)
+			filterByGreaterThanOrEqual(property, value)
+
+			For dates, the value can be a string like "2022-12-31" or a Date object:
+
+			filterByDateBefore(property, value)
+			filterByDateBeforeOrEqual(property, value)
+			filterByDateAfter(property, value)
+			filterByDateAfterOrEqual(property, value)
+
+			And if you need more flexibility:
+
+			filter((eachDataObject) => { return trueOrFalse; })
+			filterByCustom(propertyName, (valueOfEachItem) => { return trueOrFalse; })
+
+
+
+
+
+	## To grab a whole series from Amazon from developer console
 
 		// Digital (Amazon JP)
 		[...document.querySelectorAll("a.itemBookTitle")].map((x,i) => (i+1)+';'+x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")+";6").join("\n")
@@ -12,21 +65,23 @@
 		// Physical (Amazon US)
 		[...document.querySelectorAll(".a-link-normal")].filter(el => (el.text && el.text.includes("Paperback"))).map(x => x.href.replace(/^.*product\/([\d\w]+)(\/|\?).*$/, "$1")).join("\n ")
 
-	Shortcut for filling the volumes of a series: Paste into the volumes field of the series (which would normally contain raw json) a list of volumes, one per line, in the following format:
+	## Volumes shortcut
 
-	colorder;asin;status;sourceasin;otherasin;orderlabel;koboId
+		Shortcut for filling the volumes of a series: Paste into the volumes field of the series (which would normally contain raw json) a list of volumes, one per line, in the following format:
 
-	As a reminder, volume status => Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
-	(ASIN will be interpreted as source asin if status=6)
+		colorder;asin;status;sourceasin;otherasin;orderlabel;koboId
 
-	Example:
+		As a reminder, volume status => Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
+		(ASIN will be interpreted as source asin if status=6)
 
-	1;B07RSBNN6S;7;B098G2621H;;I;series-id-kobo-vol-1
-	2;B0916C8BD2;6;;;II
-	3;B08TYF1MNV;6;;;III
-	4;B08KYGV773;6;;;IV
+		Example:
 
-	This is parsed in the constructor for BookSeriesVolumeDO
+		1;B07RSBNN6S;7;B098G2621H;;I;series-id-kobo-vol-1
+		2;B0916C8BD2;6;;;II
+		3;B08TYF1MNV;6;;;III
+		4;B08KYGV773;6;;;IV
+
+		This is parsed in the constructor for BookSeriesVolumeDO
 
 	*/
 
@@ -86,6 +141,36 @@
 	}
 	jQuery.prototype.distanceToRight = function() {
 		return jQuery(document).width() - this.offset().left - this.width();
+	}
+
+	if (!Array.prototype.flat) {
+		Array.prototype.flat = function(depth) {
+
+			'use strict';
+
+			// If no depth is specified, default to 1
+			if (depth === undefined) {
+				depth = 1;
+			}
+
+			// Recursively reduce sub-arrays to the specified depth
+			var flatten = function (arr, depth) {
+
+				// If depth is 0, return the array as-is
+				if (depth < 1) {
+					return arr.slice();
+				}
+
+				// Otherwise, concatenate into the parent array
+				return arr.reduce(function (acc, val) {
+					return acc.concat(Array.isArray(val) ? flatten(val, depth - 1) : val);
+				}, []);
+
+			};
+
+			return flatten(this, depth);
+
+		};
 	}
 
 	function timeSinceShort(unixms, seconds) {
@@ -5260,7 +5345,7 @@ BookSeriesDO.getAllSeries = function() {
 }
 
 BookSeriesDO.getAllVolumes = function() {
-	return this.getAllSeries().map(x => x.getVolumes()).flat();
+	return BookSeriesVolumeDO.COL(this.getAllSeries().asDOArray().map(x => x.getVolumes().asDOArray()).flat());
 }
 
 BookSeriesDO.iterateAllSeries = function(callback) {

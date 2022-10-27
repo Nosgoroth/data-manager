@@ -59,7 +59,7 @@ if (file_exists('login.php')) {
 
 	<script type='text/javascript' src='res/doop/oop.js'></script>
 	<script type='text/javascript' src='res/doop/do.js'></script>
-	<script type='text/javascript' src='res/doop/col.js'></script>
+	<script type='text/javascript' src='res/doop/col.js?v=2'></script>
 	<script type='text/javascript' src='res/doop/jquery.creation_extensions.js'></script>
 	<script type='text/javascript' src='res/doop/do.extension.DataObjectFormRenderer.js'></script>
 	<script type='text/javascript' src='res/doop/do.extension.DataObjectRenderer.js'></script>

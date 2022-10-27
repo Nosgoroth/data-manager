@@ -273,31 +273,41 @@
 				if (type==="string" || type==="str" || type==="multilang") {
 					av = av.toLowerCase();
 					bv = bv.toLowerCase();
-	            }
-	            if (type === "int" || type === "integer" || type === "number" || type === "float") {
-	            	if (isNaN(av)) {
-	            		av = null;
-	            	}
-	            	if (isNaN(bv)) {
-	            		bv = null;
-	            	}
-	            }
+				}
+				if (type === "int" || type === "integer" || type === "number" || type === "float") {
+					if (isNaN(av)) {
+						av = null;
+					}
+					if (isNaN(bv)) {
+						bv = null;
+					}
+				}
 				if (av < bv) { return (reverse?1:-1); }
 				else if (av > bv) { return (reverse?-1:1); }
 				else { return 0; }
 				
-	        });
+			});
 			this._recalculate();
-	    },
+		},
 
 
 
 		reverse: function(){
 			this._dataobjects.reverse();
 			this._recalculate();
-	    },
+		},
 
-	    map: function(callback){
+		map: function(callback){
+			var values = [];
+			for(var i = 0; i < this._dataobjects.length; i++) {
+				var DO = this._dataobjects[i];
+				var pkval = DO.pkGet();
+				values.push(callback(DO));
+			}
+			return values;
+		},
+
+		mapObject: function(callback){
 			var values = {};
 			for(var i = 0; i < this._dataobjects.length; i++) {
 				var DO = this._dataobjects[i];
@@ -305,24 +315,31 @@
 				values[pkval] = callback(DO);
 			}
 			return values;
-	    },
+		},
 
-	    run: function(methodName, methodParams){
-	    	return this.map(function(DO){
-	    		return ((typeof DO[methodName] === "function")
+		run: function(methodName, methodParams){
+			return this.mapObject(function(DO){
+				return ((typeof DO[methodName] === "function")
 						  	? DO[methodName].apply(DO, methodParams)
 						  	: null
 						 );
-	    	});
+			});
 		},
-		
+
+
 		runAsArray: function(methodName, methodParams){
-			var valsindexed = this.run(methodName, methodParams);
-			var arr = [];
-			for(var i in valsindexed) {
-				arr.push(valsindexed[i]);
-			}
-			return arr;
+			return this.map(function(DO){
+				return ((typeof DO[methodName] === "function")
+						  	? DO[methodName].apply(DO, methodParams)
+						  	: null
+						 );
+			});
+		},
+
+		runAndJoin: function(methodName, methodParams, glue) {
+			methodName = methodName ? methodName : "toString";
+			glue = glue ? glue : "\n";
+			return this.runAsArray(methodName, methodParams).join(glue);
 		},
 			
 		filter: function(callback, in_place){
@@ -342,8 +359,11 @@
 			}
 		},
 			
-		filterByPropertyValue: function(property, value, in_place){
+		filterByPropertyValue: function(property, value, comparisonCallback){
 			return this.filter(function(DO){
+				if (comparisonCallback) {
+					return comparisonCallback(DO.get(property), value, DO);
+				}
 				if (Array.isArray(value)) {
 					if (value.indexOf(DO.get(property)) !== -1) {
 						return true;
@@ -355,6 +375,58 @@
 				}
 				return false;
 			});
+		},
+
+		_fixDateFormat: function(value) {
+			if (!value || !value.match) { return value; }
+			let m;
+			if (m = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)) {
+				return m[3]+"-"+m[2]+"-"+m[1];
+			}
+			return value;
+		},
+
+		_getDateObject: function(value) {
+			if (value instanceof Date) { return value; }
+			value = this._fixDateFormat(value);
+			return new Date(value);
+		},
+
+
+		filterByCustom: function(property, callback) {
+			return this.filterByPropertyValue(property, null, callback);
+		},
+		filterByEquals: function(property, value) {
+			return this.filterByCustom(property, dovalue => dovalue == value);
+		},
+		filterByLessThan: function(property, value) {
+			return this.filterByCustom(property, dovalue => dovalue < value);
+		},
+		filterByLessThanOrEqual: function(property, value) {
+			return this.filterByCustom(property, dovalue => dovalue <= value);
+		},
+		filterByGreaterThan: function(property, value) {
+			return this.filterByCustom(property, dovalue => dovalue > value);
+		},
+		filterByGreaterThanOrEqual: function(property, value) {
+			return this.filterByCustom(property, dovalue => dovalue >= value);
+		},
+
+		filterByDateBefore: function(property, date) {
+			date = this._getDateObject(date);
+			return this.filterByCustom(property, value => this._getDateObject(value) < date);
+		},
+		filterByDateBeforeOrEqual: function(property, date) {
+			date = this._getDateObject(date);
+			return this.filterByCustom(property, value => this._getDateObject(value) <= date);
+		},
+		filterByDateAfter: function(property, date) {
+			date = this._getDateObject(date);
+			return this.filterByCustom(property, value => this._getDateObject(value) > date);
+		},
+		filterByDateAfterOrEqual: function(property, date) {
+			date = this._getDateObject(date);
+			return this.filterByCustom(property, value => this._getDateObject(value) >= date);
 		},
 
 		slice: function(begin, end){
