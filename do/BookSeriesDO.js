@@ -2299,6 +2299,7 @@
 		types: {
 			id: "int",
 			name: "string",
+			nickname: "string",
 			type: ["enum", ["Novel", "Manga", "Other"]],
 			store: ["enum", [
 				"Phys",
@@ -5202,7 +5203,7 @@
 					},
 				},
 				hideFields: [
-					"id", "lang", "read", "precount",
+					"id", "nickname", "lang", "read", "precount",
 					"lastcheck", "lastupdate",
 					"publishedVolumes", "finishedPublication", "volumes", "forcednotes", "morenotes",
 					"link", "kindleSearchString", "kindleSearchStringSource", "ignoreIssues",
@@ -5367,7 +5368,7 @@ BookSeriesDO.iterateAllSeries = function(callback) {
 
 BookSeriesDO.getSeriesByName = function(name) {
 	name = name.toLowerCase();
-	return this.getAllSeries().filter(x => x.getName().toLowerCase().includes(name))[0];
+	return this.getAllSeries().filter(x => x.getName().toLowerCase().includes(name) || x.getNickname().toLowerCase().includes(name))[0];
 }
 
 
