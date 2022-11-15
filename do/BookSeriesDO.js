@@ -4008,10 +4008,13 @@
 								// If this is actually preordered in source, then we won't consider it a source volume
 								if (currentIsSource && (
 									sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder
-									|| lang === BookSeriesDO.Enum.Lang.JP
+									//|| lang === BookSeriesDO.Enum.Lang.JP
 								)) {
+									preordered += 1;
 									currentIsSource = false;
-									currentIsSourcePreorder = true;
+									if (sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder) {
+										currentIsSourcePreorder = true;
+									}
 									_release = volumeDO.getReleaseDateSourceMoment();
 									if (!_release || !_release.isValid()) { break; }
 								}
