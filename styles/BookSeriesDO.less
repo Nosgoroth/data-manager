@@ -212,12 +212,14 @@
 			}
 		}
 
+		/*
 		&[data-status="6"][data-status-source="1"] .coverContainer { //Read
 			@color: #e0df0d;
 			border-color: @color;
 			.colorder { background: @color; color: black; }
 			.coverframe { border-color: @color; }
 		}
+		*/
 		&[data-status="6"][data-status-source="2"] .coverContainer { //Backlog
 			@color: #ed7e3b;
 			border-color: @color;
@@ -226,6 +228,12 @@
 		}
 		&[data-status="6"][data-status-source="3"] .coverContainer { //Preorder
 			@color: #38d481;
+			border-color: @color;
+			.colorder { background: @color; color: white; }
+			.coverframe { border-color: @color; }
+		}
+		&[data-status="6"][data-status-source="5"] .coverContainer { //Store wait
+			@color: #63dae0;
 			border-color: @color;
 			.colorder { background: @color; color: white; }
 			.coverframe { border-color: @color; }
@@ -242,6 +250,10 @@
 		&[data-status-source="3"] .sourcepip { //Preorder
 			display: block;
 			background: #38d481;
+		}
+		&[data-status-source="5"] .sourcepip { //Store wait
+			display: block;
+			background: #63dae0;
 		}
 	}
 

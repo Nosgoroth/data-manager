@@ -677,6 +677,7 @@ window.BookSeriesIssueItem = Object.extends({
 				;
 			for (var i = 1; i < actions.length; i++) {
 				let action = actions[i];
+				if (!action) { continue; }
 				if (action.divider) {
 					this.generateDropdownActionItemDivider()
 						.appendTo($dropdownActions);
@@ -791,6 +792,7 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.LocalVolumeOverdue:
 				return this.bookSeriesDO.getNextVolumeExpectedDateUncorrected()?.unix() ?? 0;
 			
+			case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 			case BookSeriesIssue.NoSourceStoreReferences:
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
@@ -851,6 +853,7 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.LocalVolumeOverdue:
 				return `Vol. ${this.firstUnavailableSourceColorder} overdue ${this.bookSeriesDO.getOverdueText()}`;
 
+			case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 			case BookSeriesIssue.AwaitingDigitalVersionSource:
 			case BookSeriesIssue.NoSourceStoreReferences:
 				{
@@ -923,10 +926,15 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.NoLocalStoreReferences:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.volumeWithIssueDO?.getColorder());
 				break;
+			case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
 			case BookSeriesIssue.CancelledAtSource:
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.nextVolumeColorder);
+				if (actions?.length) {
+					actions.push({ divider: true });
+				}
+				actions = actions.concat(this.volumeWithIssueDO?.getStoreLinkActions());
 				break;
 			case BookSeriesIssue.NoSourceStoreReferences:
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.volumeWithIssueDO.getColorder());
@@ -1404,8 +1412,10 @@ window.bookSeriesAjaxInterface = Object.extends({
 				BookSeriesIssue.NoLocalStoreReferences,
 				BookSeriesIssue.WaitingForLocal,
 				BookSeriesIssue.LocalVolumeOverdue,
+
 				BookSeriesIssue.NoSourceStoreReferences,
 				// BookSeriesIssue.AwaitingDigitalVersionSource,
+				BookSeriesIssue.AwaitingStoreAvailabilitySource,
 				BookSeriesIssue.WaitingForSource,
 				BookSeriesIssue.SourceVolumeOverdue,
 				BookSeriesIssue.CancelledAtSource,

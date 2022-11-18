@@ -419,6 +419,7 @@
 		PrintPreorderAwaitingArrival: 14,
 		AwaitingDigitalVersionSource: 15,
 		AnnouncedSeriesAvailable: 16,
+		AwaitingStoreAvailabilitySource: 17,
 	};
 
 	window.getBookSeriesIssueName = function(issue) {
@@ -439,9 +440,14 @@
 			case BookSeriesIssue.PrintPreorderAwaitingArrival: return 'Print preorder awaiting arrival';
 			case BookSeriesIssue.AwaitingDigitalVersionSource: return 'Awaiting digital version at source';
 			case BookSeriesIssue.AnnouncedSeriesAvailable: return 'Announced series available';
+			case BookSeriesIssue.AwaitingStoreAvailabilitySource: return 'Waiting for store source';
 			default: return 'Unknown issue';
 		}
 	}
+
+
+
+
 
 
 
@@ -524,7 +530,7 @@
 				"None", "Source", "Available", "StoreWait"
 			]],
 			statusSource: ["enum", [
-				"Read", "Backlog", "Preorder", "Available"
+				"Read", "Backlog", "Preorder", "Available", "StoreWait"
 			]],
 			notes: "string",
 			releaseDate: "string", //DD/MM/YYYY
@@ -1314,7 +1320,6 @@
 
 
 				switch(status) {
-					default: break;
 					case this.__static.Enum.Status.Read:
 						addStatus(this.__static.Enum.Status.Backlog, "backlog");
 						break;
@@ -1332,6 +1337,7 @@
 						addStatus(this.__static.Enum.Status.Backlog, "backlog");
 						addStatus(this.__static.Enum.Status.Read, "read");
 						break;
+					default:
 					case this.__static.Enum.Status.None:
 						addStatus(this.__static.Enum.Status.Source, "source");
 					case this.__static.Enum.Status.Source:
@@ -1366,7 +1372,11 @@
 
 
 				switch(status) {
-					default: break;
+					default:
+						addStatus(this.__static.Enum.StatusSource.StoreWait, "store wait");
+						addStatus(this.__static.Enum.StatusSource.Available, "available");
+						addStatus(this.__static.Enum.StatusSource.Read, "read");
+						break;
 					case this.__static.Enum.StatusSource.Read:
 						addStatus(this.__static.Enum.StatusSource.Backlog, "backlog");
 						break;
@@ -1382,6 +1392,11 @@
 						addStatus(this.__static.Enum.StatusSource.Preorder, "preorder");
 						addStatus(this.__static.Enum.StatusSource.Backlog, "backlog");
 						//addStatus(this.__static.Enum.StatusSource.Read, "read");
+						break;
+					case this.__static.Enum.StatusSource.StoreWait:
+						addStatus(this.__static.Enum.StatusSource.Available, "available");
+						addStatus(this.__static.Enum.StatusSource.Preorder, "preorder");
+						addStatus(this.__static.Enum.StatusSource.Backlog, "backlog");
 						break;
 				}
 
@@ -2671,6 +2686,20 @@
 				})[0];
 			},
 
+			getFirstUnownedVolumeSource: function() {
+				const volumesCOL = this.getVolumes();
+				return volumesCOL.filter(x => {
+					if (x.isTreatAsNotSequential()) {
+						return false;
+					}
+					const st = x.getStatusSource();
+					return (
+						st !== BookSeriesVolumeDO.Enum.StatusSource.Read &&
+						st !== BookSeriesVolumeDO.Enum.StatusSource.Backlog
+					);
+				})[0];
+			},
+
 			getFirstOwnedVolumeSource: function(volumesCOL) {
 				volumesCOL = volumesCOL ? volumesCOL : this.getVolumes();
 				return volumesCOL.filter(x => {
@@ -2972,13 +3001,35 @@
 				}
 
 				const firstUnowned = this.getFirstUnownedVolume();
+				const firstOwnedSource = this.getFirstOwnedVolumeSource();
+				const firstUnownedSource = this.getFirstUnownedVolumeSource();
 				const isFinishedPublication = this.isFinishedPublication();
 				const seriesStatus = this.getStatus();
 				const showSourceWaitingWhenNotAllVolumesOwned = !!options.showSourceWaitingWhenNotAllVolumesOwned;
 
-				if ((!firstUnowned || showSourceWaitingWhenNotAllVolumesOwned) && !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended) && !hasNoSource) {
-					return [BookSeriesIssue.WaitingForSource];
+
+
+				if (firstUnownedSource && firstUnownedSource.getStatusSource() === BookSeriesVolumeDO.Enum.StatusSource.StoreWait) {
+					return [BookSeriesIssue.AwaitingStoreAvailabilitySource, firstUnownedSource];
 				}
+
+
+
+				if (
+					(!firstUnowned || showSourceWaitingWhenNotAllVolumesOwned)
+					&& !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended)
+					&& !hasNoSource
+					) {
+					return [BookSeriesIssue.WaitingForSource, firstUnowned];
+				}
+				// Also return this issue for series where at least one source volume owned
+				if (
+					(firstOwnedSource && (!firstUnownedSource || showSourceWaitingWhenNotAllVolumesOwned))
+					&& !(isFinishedPublication || seriesStatus === BookSeriesDO.Enum.Status.Ended)
+					) {
+					return [BookSeriesIssue.WaitingForSource, firstUnownedSource];
+				}
+
 
 				const volumes = this.getVolumes();
 
@@ -3009,6 +3060,7 @@
 					case BookSeriesIssue.NoSourceStoreReferences:
 						return true;
 					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 						return (this.getStore() === BookSeriesDO.Enum.Store.Kindle);
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
