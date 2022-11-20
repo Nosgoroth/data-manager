@@ -4625,6 +4625,7 @@
 
 				var BSEnumStatus = BookSeriesDO.Enum.Status;
 				var BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
+				var BSVEnumStatusSource = BookSeriesVolumeDO.Enum.StatusSource;
 
 				const $container = jQuery('<div class="bookSeriesTiles">');
 
@@ -4652,7 +4653,7 @@
 					}
 
 					const seriesVolumesCOL = bookSeriesDO.getVolumes();
-					const unreadVolumesCOL = seriesVolumesCOL.filter(x => x.getStatus() === BSVEnumStatus.Backlog);
+					const unreadVolumesCOL = seriesVolumesCOL.filter(x => x.getStatus() === BSVEnumStatus.Backlog || x.getStatusSource() === BSVEnumStatusSource.Backlog);
 
 					if (unreadVolumesCOL.length === 0) { return; }
 
@@ -4660,12 +4661,17 @@
 						return [
 							BSVEnumStatus.Backlog,
 							BSVEnumStatus.Available,
-						].includes(x.getStatus());
+						].includes(x.getStatus()) || [
+							BSVEnumStatusSource.Backlog,
+							BSVEnumStatusSource.Available,
+						].includes(x.getStatusSource());
 					});
 					const preorderVolumesCOL = seriesVolumesCOL.filter(x => {
 						return [
 							BSVEnumStatus.Preorder,
-						].includes(x.getStatus());
+						].includes(x.getStatus()) || [
+							BSVEnumStatusSource.Preorder,
+						].includes(x.getStatusSource());
 					});
 
 					const volumeDO = unreadVolumesCOL[0];
