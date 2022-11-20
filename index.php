@@ -112,7 +112,10 @@ require_once("common.php");
 
 	<?php if (isset($_REQUEST["type"])) { ?>
 	<script type="text/javascript">
-		customMultiDataObjectEditor.setDefaultType(<?= json_encode($_REQUEST["type"]) ?>);
+		<?php
+			$dataset = isset($_REQUEST["dataset"]) ? $_REQUEST["dataset"] : null;
+		?>
+		customMultiDataObjectEditor.setDefaultType(<?= json_encode($_REQUEST["type"]) ?>, <?= json_encode($dataset) ?>);
 	</script>
 	<?php } ?>
 

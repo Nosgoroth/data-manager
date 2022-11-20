@@ -18,8 +18,12 @@ window.customMultiDataObjectEditor = Object.extends({
 		}
 	},
 
-	setDefaultType: function(typename){
+	setDefaultType: function(typename, dataset){
 		this.defaultType = typename.toLowerCase();
+		this.setDataset(dataset);
+	},
+	setDataset: function(dataset){
+		this.dataset = (dataset ? dataset.toLowerCase() : null);
 	},
 
 	ready: function(){
@@ -174,6 +178,7 @@ window.customMultiDataObjectEditor = Object.extends({
 
 		this._editor = Object.extends(Object.shallowExtend({}, _options, {
 			_type: _type,
+			_dataset: this.dataset,
 			_tableContainerSelector: jQuery("<div>").addClass("tableContainer").appendTo(this.$editorContainer),
 			_formContainerSelector: jQuery("<div>").addClass("formContainer").appendTo(this.$editorContainer),
 			DataObjectCollectionEditor_beforeRender: function(){

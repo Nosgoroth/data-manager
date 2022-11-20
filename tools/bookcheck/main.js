@@ -1244,6 +1244,7 @@ window.BookSeriesIssueItem = Object.extends({
 
 window.bookSeriesAjaxInterface = Object.extends({
 	_type: window.BookSeriesDO,
+	_dataset: window._dataset,
 	_ajaxendpoint: "../../ajax.php",
 	JsonAjaxInterface_afterDomReady: function(){},
 

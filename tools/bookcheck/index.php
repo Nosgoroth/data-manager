@@ -74,6 +74,9 @@ $fmt = $fmt ? $fmt : 0;
 ?>
 <script type='text/javascript' src='../../do/BookSeriesDO.js?t=<?= $fmt ?>'></script>
 
+<script type="text/javascript">
+	window._dataset = <?= json_encode(isset($_REQUEST["dataset"]) ? $_REQUEST["dataset"] : null) ?>;
+</script>
 <!-- Checker source -->
 <?php
 $fmt = @filemtime("main.js");

@@ -4776,8 +4776,14 @@
 					;
 				}
 
+
+				const defaultOptions = {};
+				if (window.customMultiDataObjectEditor._editor._dataset) {
+					defaultOptions.dataset = window.customMultiDataObjectEditor._editor._dataset;
+				}
+
 				$topRow.appendR('<a class="btn">')
-					.attr("href", "./tools/bookcheck/")
+					.attr("href", "./tools/bookcheck/?"+jQuery.param(Object.assign({}, defaultOptions, {})) )
 					.attr("target", "_blank")
 					.text("BookCheck")
 					;
@@ -4797,29 +4803,30 @@
 					const actuallyAddSeparator = function(){ return $ddm.appendR('<li>').addClass('divider'); }
 
 					addOption()
-						.attr("href", "./tools/bookstats/")
+						.attr("href", "./tools/bookstats/?"+jQuery.param(Object.assign({}, defaultOptions, {})) )
 						.attr("target", "_blank")
 						.text("Stats")
 						;
 					addOption()
-						.attr("href", "./tools/bookshelf/?coverWidth=30")
+						.attr("href", "./tools/bookshelf/?"+jQuery.param(Object.assign({}, defaultOptions, { coverWidth: 30 })))
 						.attr("target", "_blank")
 						.text("Bookshelf")
 						;
 
 					addSeparator();
+
 					addOption()
-						.attr("href", "./customajax_delaychecker.php?debug=1")
+						.attr("href", "./customajax_delaychecker.php?"+jQuery.param(Object.assign({}, defaultOptions, { debug: 1 })))
 						.attr("target", "_blank")
 						.text("Check delays")
 						;
 					addOption()
-						.attr("href", "./customajax_delaychecker.php?debug=1&mode=wide")
+						.attr("href", "./customajax_delaychecker.php?"+jQuery.param(Object.assign({}, defaultOptions, {debug: 1, mode: "wide"})))
 						.attr("target", "_blank")
 						.text("Check delays (wide)")
 						;
 					addOption()
-						.attr("href", "./customajax_delaychecker.php?debug=1&apply=1")
+						.attr("href", "./customajax_delaychecker.php?"+jQuery.param(Object.assign({}, defaultOptions, {debug: 1, apply: 1})))
 						.attr("target", "_blank")
 						.text("Apply delays (not implemented)")
 						;

@@ -13,11 +13,11 @@ if (!is_dir("_data")) {
 if (isset($_REQUEST["action"])) {
 	error_reporting(0);
 	$domain = isset($_REQUEST["domain"]) ? $_REQUEST["domain"] : null;
+	$dataset = isset($_REQUEST["dataset"]) ? $_REQUEST["dataset"] : null;
 	if (!$domain) {
 		die();
 	}
-	$domain = preg_replace("/[^\d\w]*/", "", strtolower($domain));
-	$jsonRequest = new JsonRequestDomain($domain);
+	$jsonRequest = new JsonRequestDomain($domain, $dataset);
 
 	switch ($_REQUEST["action"]) {
 

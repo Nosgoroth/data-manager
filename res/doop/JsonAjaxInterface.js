@@ -3,6 +3,7 @@ window.JsonAjaxInterface = Object.extends({
 
 	_ajaxendpoint: "./",
 	_type: null,
+	_dataset: null,
 	_jsonAjaxAutostartCheckingRemoteModificationWithInterval: null,
 
 	//private
@@ -33,6 +34,7 @@ window.JsonAjaxInterface = Object.extends({
 		var data = {
 			action: "ajaxload",
 			domain: this._type.DOname,
+			dataset: this._dataset,
 		};
 
 		if (!this._allowCacheResponses) {
@@ -65,6 +67,7 @@ window.JsonAjaxInterface = Object.extends({
 			data: {
 				action: "ajaxsave",
 				domain: this._type.DOname,
+				dataset: this._dataset,
 				data: JSON.stringify(this._COL.asRawArray())
 			},
 			method: "POST",
@@ -101,7 +104,8 @@ window.JsonAjaxInterface = Object.extends({
 			url: this._ajaxendpoint,
 			data: {
 				action: "lastmodified",
-				domain: this._type.DOname
+				domain: this._type.DOname,
+				dataset: this._dataset,
 			},
 			method: "POST",
 			dataType: "json",
