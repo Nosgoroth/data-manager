@@ -24,13 +24,17 @@ class JsonRequestOptions {
 
 class JsonRequestDomain extends JsonRequest {
 
-	public function __construct($domain) {
-		$this->setDomain($domain);
+	public function __construct($domain, $suffix=null) {
+		$this->setDomain($domain, $suffix);
 	}
 
-	protected function setDomain($domain) {
+	protected function setDomain($domain, $suffix=null) {
 		$domain = preg_replace("/[^\d\w\-_]*/", "", strtolower($domain));
-		$this->setFilename("_data/data_".$domain.".json");
+		if ($suffix) {
+			$suffix = preg_replace("/[^\d\w\-_]*/", "", strtolower($suffix));
+		}
+		$this->setFilename("_data/data_".$domain.($suffix?"_$suffix":"").".json");
+		$this->setBackupFilename("_data/data_".$domain.($suffix?"_$suffix":"")."_backup.json");
 	}
 }
 
@@ -40,6 +44,8 @@ class JsonRequestDomain extends JsonRequest {
 class JsonRequest {
 
 	protected $filename = "none.json";
+	protected $backup_filename = null;
+	protected $backup_recency = 60*60*24*7; // 7 days
 
 	public function __construct($filename) {
 		$this->setFilename($filename);
@@ -48,6 +54,12 @@ class JsonRequest {
 	protected function setFilename($filename) {
 		$this->filename = $filename;
 	}
+	protected function setBackupFilename($filename) {
+		$this->backup_filename = $filename;
+	}
+	protected function setBackupRecency($seconds) {
+		$this->backup_recency = $seconds;
+	}
 
 	public function getLastModified() {
 		return @filemtime($this->filename);
@@ -55,6 +67,9 @@ class JsonRequest {
 
 	public function writeRaw($rawdata) {
 		file_put_contents($this->filename, $rawdata);
+		if ($this->backup_filename && (!file_exists($this->backup_filename) || filemtime($this->backup_filename) + $this->backup_recency < time())) {
+			file_put_contents($this->backup_filename, $rawdata);
+		}
 	}
 
 	public function write($jsondata) {
