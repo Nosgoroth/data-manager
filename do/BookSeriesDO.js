@@ -1676,6 +1676,15 @@
 
 
 
+				if (this.getNotes()) {
+					addOption().html('<i class="icon-comment"></i> See notes').click(function(){
+						alert(this.getNotes());
+					}.bind(this));
+					addSeparator();
+				}
+
+
+
 				var asin = this.getBestAsinForLink();
 				var mainAsin = this.getAsin();
 				var sourceAsin = this.getSourceAsin();
@@ -2080,7 +2089,6 @@
 				addOption($moreSubmenu).html('<i class="icon-eye-close"></i> Hide').click(function(){
 					$container.hide();
 				}.bind(this));
-
 
 				addOption($moreSubmenu).html('<i class="icon-pencil"></i> Edit series').click(this.throwParentEditForm.bind(this));
 
