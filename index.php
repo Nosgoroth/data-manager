@@ -4,6 +4,7 @@
 if (file_exists('login.php')) {
 	require_once("login.php");
 }
+require_once("common.php");
 
 
 ?><!DOCTYPE html><html><head>
@@ -56,26 +57,28 @@ if (file_exists('login.php')) {
 	<script async src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.min.js"></script>
 	<script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.18.0/js/md5.min.js'></script>
 	<script src="//cdn.jsdelivr.net/npm/less@3.13" ></script>
-
-	<script type='text/javascript' src='res/doop/oop.js'></script>
-	<script type='text/javascript' src='res/doop/do.js'></script>
-	<script type='text/javascript' src='res/doop/col.js?v=2'></script>
-	<script type='text/javascript' src='res/doop/jquery.creation_extensions.js'></script>
-	<script type='text/javascript' src='res/doop/do.extension.DataObjectFormRenderer.js'></script>
-	<script type='text/javascript' src='res/doop/do.extension.DataObjectRenderer.js'></script>
-	<script type='text/javascript' src='res/doop/logger.js'></script>
-	<script type='text/javascript' src='res/doop/ReadyObject.js'></script>
-	<script type='text/javascript' src='res/doop/JsonAjaxInterface.js'></script>
-	<script type='text/javascript' src='res/doop/DataObjectCollectionEditor.js'></script>
-
+	
 	<!-- App source -->
-	<script type='text/javascript' src='cdoe.js'></script>
+	
 	<?php
+
+		ScriptTag::generate("res/doop/oop.js");
+		ScriptTag::generate("res/doop/do.js");
+		ScriptTag::generate("res/doop/col.js");
+		ScriptTag::generate("res/doop/jquery.creation_extensions.js");
+		ScriptTag::generate("res/doop/do.extension.DataObjectFormRenderer.js");
+		ScriptTag::generate("res/doop/do.extension.DataObjectRenderer.js");
+		ScriptTag::generate("res/doop/logger.js");
+		ScriptTag::generate("res/doop/ReadyObject.js");
+		ScriptTag::generate("res/doop/JsonAjaxInterface.js");
+		ScriptTag::generate("res/doop/DataObjectCollectionEditor.js");
+		
+		ScriptTag::generate("cdoe.js");
+		
 		foreach(glob("do/*DO.js") as $DOfile) {
-			$fmt = @filemtime($DOfile);
-			$fmt = $fmt ? $fmt : 0;
-			?><script type='text/javascript' src='<?= $DOfile ?>?t=<?= $fmt ?>'></script><?php
+			ScriptTag::generate($DOfile);
 		}
+
 	?>
 	<script>
 		window._do_configs = {};
