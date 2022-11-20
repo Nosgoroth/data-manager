@@ -3989,9 +3989,12 @@
 					);
 				}
 
+				let usingSourceStatusAsDefault = false;
+
 				var volumesCOL = this.getVolumes();
 				if (volumesCOL.length > 0) {
 					read = 0; owned = 0; preordered = 0; available = 0;
+					readsource = 0; ownedsource = 0; preorderedsource = 0; availablesource = 0;
 					let earliestPreorder = null;
 					let earliestPreorderIsPhys = false;
 					let earliestPreorderIsSource = false;
@@ -4106,11 +4109,40 @@
 								break;
 						}
 
+						if (firstOwnedVolumeSourceDO) {
+							switch (sourceStatus) {
+								case BookSeriesVolumeDO.Enum.StatusSource.Read:
+									availablesource += 1;
+									ownedsource += 1;
+									readsource += 1;
+									break;
+								case BookSeriesVolumeDO.Enum.StatusSource.Backlog:
+									availablesource += 1;
+									ownedsource += 1;
+									break;
+								case BookSeriesVolumeDO.Enum.StatusSource.Preorder:
+									preorderedsource += 1;
+									availablesource += 1;
+									break;
+								case BookSeriesVolumeDO.Enum.StatusSource.Available:
+									availablesource += 1;
+									break;
+							}
+						}
+
 
 						if (debug) {
 							consoleLogItems.push((willUpdate ? "[WILL UPDATE]" : "[skip]"));
 							console.log.apply(this, consoleLogItems);
 						}
+					}
+
+					if (owned < ownedsource) {
+						owned = ownedsource;
+						read = readsource;
+						preordered = preorderedsource;
+						available = availablesource;
+						usingSourceStatusAsDefault = true;
 					}
 					this.setOwned(owned); this.setRead(read); this.setPrecount(preordered);
 
@@ -4120,9 +4152,9 @@
 							text += " Phys";
 						} else if (earliestPreorderIsSW) {
 							text += " SW";
-						} else if (earliestPreorderIsSource) {
+						} else if (earliestPreorderIsSource && !usingSourceStatusAsDefault) {
 							text = "JP "+text;
-						} else if (earliestPreorderIsSourcePreorder) {
+						} else if (earliestPreorderIsSourcePreorder && !usingSourceStatusAsDefault) {
 							text += " JP";
 						}
 						this.setNotes(text);
