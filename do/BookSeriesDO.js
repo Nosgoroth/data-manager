@@ -631,6 +631,24 @@
 				return ss;
 			},
 
+
+			isStatus: function(status) {
+				return !!(this.getStatus() === status);
+			},
+			isStatusSource: function(statusSource) {
+				return !!(this.getStatusSource() === statusSource);
+			},
+
+			isStatusOrStatusSource: function(status, statusSource) {
+				const currentStatus = this.getStatus();
+				if (currentStatus === status) { return true; }
+				const currentStatusSource = this.getStatusSource();
+				if (currentStatusSource === statusSource) { return true; }
+				return false;
+			},
+
+
+
 			isManualPhysKindleCheckOnly: function() {
 				return this.get("manualPhysKindleCheckOnly", false, "boolean")
 					|| this.get("manualTpbKindleCheckOnly", false, "boolean")
@@ -3084,6 +3102,7 @@
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
 					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 						return true;
 					case BookSeriesIssue.NoSourceStoreReferences:
 					case BookSeriesIssue.NoLocalStoreReferences:
@@ -4364,14 +4383,19 @@
 
 
 			_defaultRender: window.DataObjectCollectionEditor.prototype.render,
-			_tileRenderUpcoming: function(upcomingMode){
+			_tileRenderUpcoming: function(upcomingMode, upcomingOptions){
 				upcomingMode = upcomingMode ? upcomingMode : "week";
+				upcomingOptions = upcomingOptions ? upcomingOptions : "all";
 
 				var $container = jQuery('<div class="bookSeriesTiles">');
 
 				const BSEnumStatus = BookSeriesDO.Enum.Status;
 				const BSVEnumStatus = BookSeriesVolumeDO.Enum.Status;
 				const BSVEnumStatusSource = BookSeriesVolumeDO.Enum.StatusSource;
+
+				const shouldShowAvailable = !!(upcomingOptions === "all");
+				const shouldShowWaitForStore = !!(upcomingOptions === "all" || upcomingOptions === "preorders_more");
+				const shouldShowAnnounced = !!(upcomingOptions === "all" || upcomingOptions === "preorders_more");
 
 				var volumesCOL = [];
 				this._COL.forEach(function(bookSeriesDO){
@@ -4400,27 +4424,50 @@
 
 				var months = {}, monthKeys = [];
 				volumesCOL.forEach(function(volumeDO){
+					
+					// Skip volumes not in future
 					var _d = volumeDO.getBestReleaseDateMoment();
 					if (!_d || !_d.isValid() || _d.isBefore(_now)) {
 						return;
 					}
-					const status = volumeDO.getStatus();
 
-					if ([BSVEnumStatus.Read, BSVEnumStatus.Backlog].includes(status)) {
+					const status = volumeDO.getStatus();
+					const statusSource = volumeDO.getStatusSource();
+
+					const isAvailable = volumeDO.isStatusOrStatusSource(BSVEnumStatus.Available, BSVEnumStatusSource.Available);
+					const isPhys = volumeDO.isStatus(BSVEnumStatus.Phys);
+					const isPreorder = volumeDO.isStatusOrStatusSource(BSVEnumStatus.Preorder, BSVEnumStatusSource.Preorder);
+					const isStoreWait = volumeDO.isStatusOrStatusSource(BSVEnumStatus.StoreWait, BSVEnumStatusSource.StoreWait);
+					const isAnnounced = !!(volumeDO.__parentStatus === BSEnumStatus.Announced && volumeDO.getColorder() === 1);
+
+					const ownsSourceVolumes = !!(volumeDO.__firstOwnedVolumeSourceDO);
+
+					let shouldShow = true;
+					switch (upcomingOptions) {
+						default:
+						case 'all':
+							shouldShow = isAvailable || isPhys || isPreorder || isStoreWait || isAnnounced;
+							break;
+						case 'preorders_more':
+							shouldShow = isPreorder || isPhys || isStoreWait || isAnnounced;
+							break;
+						case 'preorders':
+							shouldShow = isPreorder;
+							break;
+					}
+
+					if (!shouldShow) {
 						return;
 					}
 
-					// Don't show upcoming if don't own any source volume
-					if (
-						status === BSVEnumStatus.Source
-						&& !(
-							volumeDO.__firstOwnedVolumeSourceDO
-							|| (
-								volumeDO.__parentStatus === BSEnumStatus.Announced
-								&& volumeDO.getColorder() === 1
-							)
-						)
-						) {
+					/*
+					if ([BSVEnumStatus.Read, BSVEnumStatus.Backlog].includes(status)) {
+						return;
+					}
+					*/
+
+					// Don't show upcoming source if don't own any source volume
+					if (status === BSVEnumStatus.Source && !( ownsSourceVolumes || isAnnounced )) {
 						return;
 					}
 
@@ -4768,6 +4815,7 @@
 			render: function(){
 				const renderMode = this.getExtraValueByKey("rendermode", "table");
 				const upcomingMode = this.getExtraValueByKey("upcomingmode", "week");
+				const upcomingOptions = this.getExtraValueByKey("upcomingoptions", "all");
 
 				switch(renderMode) {
 					default:
@@ -4775,7 +4823,7 @@
 						this._defaultRender();
 						break;
 					case "volumetiles_upcoming":
-						this._tileRenderUpcoming(upcomingMode);
+						this._tileRenderUpcoming(upcomingMode, upcomingOptions);
 						break;
 					case "volumetiles_backlog":
 						this._tileRenderBacklog();
@@ -4808,18 +4856,32 @@
 
 				if (renderMode === "volumetiles_upcoming") {
 					const $upcomingMode = $topRow.appendR('<span class="form-inline">')
-					.appendR('<select>')
-						.append('<option value="week">By week</option>')
-						.append('<option value="month">By month</option>')
-						.append('<option value="list">Single list</option>')
-					.val(upcomingMode)
-					.css({ width: "100px"})
-					.on('change', function(){
-						this.setExtraValue("upcomingmode", $upcomingMode.val());
-						window.customMultiDataObjectEditor.updateBrowserUri();
-						this.render();
-					}.bind(this))
-					;
+						.appendR('<select>')
+							.append('<option value="week">By week</option>')
+							.append('<option value="month">By month</option>')
+							.append('<option value="list">Single list</option>')
+						.val(upcomingMode)
+						.css({ width: "100px"})
+						.on('change', function(){
+							this.setExtraValue("upcomingmode", $upcomingMode.val());
+							window.customMultiDataObjectEditor.updateBrowserUri();
+							this.render();
+						}.bind(this))
+						;
+
+					const $upcomingOptions = $topRow.appendR('<span class="form-inline">')
+						.appendR('<select>')
+							.append('<option value="all">All</option>')
+							.append('<option value="preorders_more">Preorder & waiting</option>')
+							.append('<option value="preorders">Preorders</option>')
+						.val(upcomingOptions)
+						.css({ width: "100px"})
+						.on('change', function(){
+							this.setExtraValue("upcomingoptions", $upcomingOptions.val());
+							window.customMultiDataObjectEditor.updateBrowserUri();
+							this.render();
+						}.bind(this))
+						;
 				}
 
 
