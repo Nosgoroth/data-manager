@@ -2755,8 +2755,8 @@
 					}
 					const st = x.getStatusSource();
 					const owned = (
-						st !== BookSeriesVolumeDO.Enum.StatusSource.Read &&
-						st !== BookSeriesVolumeDO.Enum.StatusSource.Backlog
+						st === BookSeriesVolumeDO.Enum.StatusSource.Read ||
+						st === BookSeriesVolumeDO.Enum.StatusSource.Backlog
 					);
 
 					if (owned) {
@@ -2773,11 +2773,12 @@
 					lastOwned: lastOwned,
 					firstNotOwned: firstNotOwned,
 					firstNotOwnedAfterOwned: firstNotOwnedAfterOwned,
-				}
+				};
 			},
 
 			getFirstUnownedVolumeSource: function() {
-				return this.getVolumeOwnershipHighlightsSource().firstNotOwnedAfterOwned;
+				const data = this.getVolumeOwnershipHighlightsSource();
+				return data.firstNotOwnedAfterOwned ? data.firstNotOwnedAfterOwned : data.firstNotOwned;
 			},
 
 			getFirstOwnedVolumeSource: function(volumesCOL) {
