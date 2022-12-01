@@ -3146,9 +3146,30 @@
 					case BookSeriesIssue.VolumeAvailable:
 					case BookSeriesIssue.PreorderAvailable:
 					case BookSeriesIssue.AwaitingStoreAvailability:
-					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 						return true;
+					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 					case BookSeriesIssue.NoSourceStoreReferences:
+					case BookSeriesIssue.NoLocalStoreReferences:
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						return false;
+					default:
+						return false;
+				}
+			},
+			canResolveIssueWithVolumeStatusSource: function(issue) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
+					case BookSeriesIssue.NoSourceStoreReferences:
+						return true;
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+					case BookSeriesIssue.AwaitingStoreAvailability:
 					case BookSeriesIssue.NoLocalStoreReferences:
 					case BookSeriesIssue.AwaitingDigitalVersion:
 					case BookSeriesIssue.WaitingForLocal:
@@ -3259,6 +3280,7 @@
 							this.saveUpdatedVolume(volumeDO, true);
 						}
 						break;
+					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 					case BookSeriesIssue.NoSourceStoreReferences:
 						{
 							const volumeDO = this.isAnyVolumeNoSourceStoreReferences();
@@ -3352,6 +3374,31 @@
 						const firstUnowned = this.getFirstUnownedVolume();
 						firstUnowned.setStatus(newVolumeStatus);
 						this.saveUpdatedVolume(firstUnowned, true);
+						break;
+					default:
+						throw new Error('Unknown issue');
+				}
+			},
+
+			resolveIssueWithVolumeStatusSource: function(issue, newVolumeStatus, volumeDO) {
+				switch(issue) {
+					case BookSeriesIssue.AwaitingDigitalVersion:
+					case BookSeriesIssue.WaitingForLocal:
+					case BookSeriesIssue.LocalVolumeOverdue:
+					case BookSeriesIssue.PrintPreorderAwaitingArrival:
+					case BookSeriesIssue.DelayedReleaseForPreorder:
+					case BookSeriesIssue.VolumeAvailable:
+					case BookSeriesIssue.PreorderAvailable:
+					case BookSeriesIssue.AwaitingStoreAvailability:
+					case BookSeriesIssue.WaitingForSource:
+					case BookSeriesIssue.SourceVolumeOverdue:
+						throw new Error("Can't resolve this issue with a status");
+						break;
+					case BookSeriesIssue.NoSourceStoreReferences:
+					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
+						volumeDO = volumeDO ? volumeDO : this.getFirstUnownedVolumeSource();
+						volumeDO.setStatus(newVolumeStatus);
+						this.saveUpdatedVolume(volumeDO, true);
 						break;
 					default:
 						throw new Error('Unknown issue');

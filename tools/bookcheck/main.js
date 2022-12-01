@@ -1116,6 +1116,31 @@ window.BookSeriesIssueItem = Object.extends({
 				
 			}
 		});
+		actions.push({
+			label: "Set volume status src",
+			icon: "icon-chevron-right",
+			callback: () => {
+				try {
+					const legend = Object.keys(BookSeriesVolumeDO.Enum.StatusSource)
+						.map(x => `${x} = ${BookSeriesVolumeDO.Enum.StatusSource[x]}`)
+						.join(", ")
+						;
+					const status = prompt("Source status to resolve:\n"+legend);
+					if (!status) { return; }
+					if (this.bookSeriesDO.canResolveIssueWithVolumeStatusSource(this.issue)) {
+						this.bookSeriesDO.resolveIssueWithVolumeStatusSource(this.issue, status, this.volumeWithIssueDO);
+						this.save();
+					} else {
+						this.volumeWithIssueDO.setStatusSource(status);
+						this.volumeWithIssueDO.parent.saveUpdatedVolume(this.volumeWithIssueDO, true);
+						this.save();
+					}
+				} catch(err) {
+					alert(err.message);
+				}
+				
+			}
+		});
 
 		actions.push({
 			label: "Set series status",
