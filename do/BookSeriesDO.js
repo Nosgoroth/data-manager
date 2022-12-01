@@ -3398,7 +3398,7 @@
 					case BookSeriesIssue.NoSourceStoreReferences:
 					case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 						volumeDO = volumeDO ? volumeDO : this.getFirstUnownedVolumeSource();
-						volumeDO.setStatus(newVolumeStatus);
+						volumeDO.setStatusSource(newVolumeStatus);
 						this.saveUpdatedVolume(volumeDO, true);
 						break;
 					default:
