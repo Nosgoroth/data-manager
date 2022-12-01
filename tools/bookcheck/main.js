@@ -627,6 +627,8 @@ window.BookSeriesIssueItem = Object.extends({
 
 		this.lastVolume = volumesCOL[volumesCOL.length - 1];
 		this.nextVolumeColorder = this.lastVolume ? this.lastVolume.getColorder() + 1 : 1;
+		this.lastOwnedVolume = this.bookSeriesDO.getLastOwnedVolume();
+		this.lastOwnedVolumeSource = this.bookSeriesDO.getLastOwnedVolumeSource();
 		this.firstUnownedVolume = this.bookSeriesDO.getFirstUnownedVolume();
 		this.firstUnownedColorder = this.firstUnownedVolume?.getColorder() ?? this.nextVolumeColorder;
 		this.firstUnavailableSourceVolume = this.bookSeriesDO.getFirstUnavailableSourceVolume();
@@ -790,7 +792,13 @@ window.BookSeriesIssueItem = Object.extends({
 
 			case BookSeriesIssue.WaitingForLocal:
 			case BookSeriesIssue.LocalVolumeOverdue:
-				return this.bookSeriesDO.getNextVolumeExpectedDateUncorrected()?.unix() ?? 0;
+				{
+					const nextDate = this.bookSeriesDO.getNextVolumeExpectedDateUncorrected()?.unix();
+					if (nextDate) { return nextDate; }
+					const latestDate = this.lastOwnedVolume?.getReleaseDateMoment().unix();
+					if (latestDate) { return latestDate; }
+					return 0;
+				}
 			
 			case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 			case BookSeriesIssue.NoSourceStoreReferences:
@@ -798,7 +806,13 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.SourceVolumeOverdue:
 			case BookSeriesIssue.CancelledAtSource:
 			case BookSeriesIssue.AwaitingDigitalVersionSource:
-				return this.bookSeriesDO.getNextSourceVolumeExpectedDateUncorrected()?.unix() ?? Infinity;
+				{
+					const nextDate = this.bookSeriesDO.getNextSourceVolumeExpectedDateUncorrected()?.unix();
+					if (nextDate) { return nextDate; }
+					const latestDate = this.lastOwnedVolumeSource?.getReleaseDateSourceMoment().unix();
+					if (latestDate) { return latestDate; }
+					return Infinity;
+				}
 
 			default:
 				return Infinity;
