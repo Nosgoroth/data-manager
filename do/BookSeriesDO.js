@@ -2698,6 +2698,35 @@
 				return sourceCOL[sourceCOL.length - 1];
 			},
 
+			getLastOwnedVolume: function() {
+				const volumesCOL = this.getVolumes();
+				const owned = volumesCOL.filter(x => {
+					if (x.isTreatAsNotSequential()) {
+						return false;
+					}
+					const st = x.getStatus();
+					return (
+						st === BookSeriesVolumeDO.Enum.Status.Read ||
+						st === BookSeriesVolumeDO.Enum.Status.Backlog
+					);
+				});
+				return owned.length ? owned[owned.length-1] : null;
+			},
+			getLastOwnedVolumeSource: function() {
+				const volumesCOL = this.getVolumes();
+				const owned = volumesCOL.filter(x => {
+					if (x.isTreatAsNotSequential()) {
+						return false;
+					}
+					const st = x.getStatusSource();
+					return (
+						st === BookSeriesVolumeDO.Enum.StatusSource.Read ||
+						st === BookSeriesVolumeDO.Enum.StatusSource.Backlog
+					);
+				});
+				return owned.length ? owned[owned.length-1] : null;
+			},
+
 			getFirstUnownedVolume: function() {
 				const volumesCOL = this.getVolumes();
 				return volumesCOL.filter(x => {
@@ -2712,32 +2741,47 @@
 				})[0];
 			},
 
-			getFirstUnownedVolumeSource: function() {
+			getVolumeOwnershipHighlightsSource: function() {
 				const volumesCOL = this.getVolumes();
-				return volumesCOL.filter(x => {
+
+				let firstOwned = null;
+				let lastOwned = null;
+				let firstNotOwned = null;
+				let firstNotOwnedAfterOwned = null;
+
+				volumesCOL.forEach(x => {
 					if (x.isTreatAsNotSequential()) {
-						return false;
+						return;
 					}
 					const st = x.getStatusSource();
-					return (
+					const owned = (
 						st !== BookSeriesVolumeDO.Enum.StatusSource.Read &&
 						st !== BookSeriesVolumeDO.Enum.StatusSource.Backlog
 					);
-				})[0];
+
+					if (owned) {
+						lastOwned = x;
+						if (!firstOwned) { firstOwned = x; }
+					} else {
+						if (!firstNotOwned) { firstNotOwned = x; }
+						if (!firstNotOwnedAfterOwned && firstOwned) { firstNotOwnedAfterOwned = x; }
+					}
+				});
+
+				return {
+					firstOwned: firstOwned,
+					lastOwned: lastOwned,
+					firstNotOwned: firstNotOwned,
+					firstNotOwnedAfterOwned: firstNotOwnedAfterOwned,
+				}
+			},
+
+			getFirstUnownedVolumeSource: function() {
+				return this.getVolumeOwnershipHighlightsSource().firstNotOwnedAfterOwned;
 			},
 
 			getFirstOwnedVolumeSource: function(volumesCOL) {
-				volumesCOL = volumesCOL ? volumesCOL : this.getVolumes();
-				return volumesCOL.filter(x => {
-					if (x.isTreatAsNotSequential()) {
-						return false;
-					}
-					const st = x.getStatusSource();
-					return ([
-						BookSeriesVolumeDO.Enum.StatusSource.Read,
-						BookSeriesVolumeDO.Enum.StatusSource.Backlog,
-					].includes(st));
-				})[0];
+				return this.getVolumeOwnershipHighlightsSource().firstOwned;
 			},
 
 			getFirstUnavailableSourceVolume: function() {
