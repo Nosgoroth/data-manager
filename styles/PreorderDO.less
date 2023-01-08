@@ -55,3 +55,37 @@
 }
 
 
+
+
+@media (prefers-color-scheme: dark) {
+	#app .adoe_container[data-type="Preorder"] {
+
+		.dataObjectItem {
+			background: #222;
+		}
+		//Announced
+		.dataObjectItem[data-fieldvalue-status="9"] {
+			background: #e8f6fd;
+		}
+		//Preorder open
+		.dataObjectItem[data-fieldvalue-status="2"] {
+			background: #662222;
+		}
+		//Ordered
+		.dataObjectItem[data-fieldvalue-status="3"] {
+			background: #885500;
+		}
+		//Paid, shipped
+		.dataObjectItem[data-fieldvalue-status="4"],
+		.dataObjectItem[data-fieldvalue-status="5"] {
+			background: #557700;
+		}
+		//Received, released, out of print
+		.dataObjectItem[data-fieldvalue-status="6"],
+		.dataObjectItem[data-fieldvalue-status="7"],
+		.dataObjectItem[data-fieldvalue-status="8"] {
+			background: #222;
+		}
+
+	}
+}
