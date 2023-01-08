@@ -2341,7 +2341,7 @@
 			id: "int",
 			name: "string",
 			nickname: "string",
-			type: ["enum", ["Novel", "Manga", "Other"]],
+			type: ["enum", ["Novel", "Manga", "Other", "Audiobook"]],
 			store: ["enum", [
 				"Phys",
 				"Kindle",
@@ -4168,36 +4168,57 @@
 							case BookSeriesVolumeDO.Enum.Status.StoreWait:
 							case BookSeriesVolumeDO.Enum.Status.Phys:
 							case BookSeriesVolumeDO.Enum.Status.Source:
-								
-								let _release = volumeDO.getBestReleaseDateMoment();
 
+								let _release = volumeDO.getBestReleaseDateMoment();
 								if (!_release || !_release.isValid()) { break; }
+
+								let currentIsSource = (status===BookSeriesVolumeDO.Enum.Status.Source);
+
+								if (currentIsSource) {
+									switch(sourceStatus) {
+										case BookSeriesVolumeDO.Enum.StatusSource.Preorder:
+										case BookSeriesVolumeDO.Enum.StatusSource.StoreWait:
+										case BookSeriesVolumeDO.Enum.StatusSource.Backlog:
+											break;
+										case BookSeriesVolumeDO.Enum.StatusSource.Read:
+										case BookSeriesVolumeDO.Enum.StatusSource.Available:
+										default: 
+											continue; // All other statuses don't go beyond here
+									}
+								}
+								
+								
 								
 								const currentIsPhys = (status===BookSeriesVolumeDO.Enum.Status.Phys);
-								const currentIsSW = (status===BookSeriesVolumeDO.Enum.Status.StoreWait);
-								const currentIsEarlier = _release.isBefore(earliestPreorder);
-								let currentIsSource = (status===BookSeriesVolumeDO.Enum.Status.Source);
+								const currentIsSW = (status===BookSeriesVolumeDO.Enum.Status.StoreWait) || (status===BookSeriesVolumeDO.Enum.Status.Source && sourceStatus===BookSeriesVolumeDO.Enum.StatusSource.StoreWait);
+								
 								let currentIsSourcePreorder = false;
 
 								// If this is actually preordered in source, then we won't consider it a source volume
 								if (currentIsSource && (
 									sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder
+									|| sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Backlog
 									//|| lang === BookSeriesDO.Enum.Lang.JP
 								)) {
-									preordered += 1;
 									currentIsSource = false;
-									if (sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder) {
-										currentIsSourcePreorder = true;
-									}
 									_release = volumeDO.getReleaseDateSourceMoment();
 									if (!_release || !_release.isValid()) { break; }
+									
+									currentIsSourcePreorder = true;
+
+									if (sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder) {
+										preordered += 1;
+									}
 								}
+
+								const currentIsEarlier = _release.isBefore(earliestPreorder);
 
 								if (
 									// We have none saved yet
 									!earliestPreorder
-									// Or we do have one but the current one is earlier and we're not overwriting
-									//   something that's not source with a source
+									// Or we do have one but the current one is earlier and
+									//   we're not overwriting something that's not source
+									//   with a source
 									|| (currentIsEarlier && !(currentIsSource && !earliestPreorderIsSource))
 									// Or the current one is not earlier but the one we have is a source and this isn't
 									|| (earliestPreorderIsSource && !currentIsSource)

@@ -669,7 +669,11 @@ window.BookSeriesIssueItem = Object.extends({
 
 
 		const actions = this.getActions();
+		if (actions?.length && !actions[0]) {
+			actions.shift();
+		}
 		if (actions?.length > 1) {
+
 			const $dropdownActions = this.generateButtonWithDropdown(
 					actions[0].label,
 					actions[0].callback ?? (() => window.open(actions[0].url, "_blank"))
