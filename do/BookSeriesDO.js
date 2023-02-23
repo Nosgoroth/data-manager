@@ -4126,6 +4126,8 @@
 					
 					const firstOwnedVolumeSourceDO = this.getFirstOwnedVolumeSource(volumesCOL);
 
+					(debug && console.group("Volumes"));
+
 					for (var i = 0; i < volumesCOL.length; i++) {
 						const volumeDO = volumesCOL[i];
 
@@ -4183,10 +4185,10 @@
 										case BookSeriesVolumeDO.Enum.StatusSource.Preorder:
 										case BookSeriesVolumeDO.Enum.StatusSource.StoreWait:
 										case BookSeriesVolumeDO.Enum.StatusSource.Backlog:
-											break;
-										case BookSeriesVolumeDO.Enum.StatusSource.Read:
 										case BookSeriesVolumeDO.Enum.StatusSource.Available:
 										default: 
+											break;
+										case BookSeriesVolumeDO.Enum.StatusSource.Read:
 											continue; // All other statuses don't go beyond here
 									}
 								}
@@ -4281,7 +4283,18 @@
 						}
 					}
 
+					(debug && console.groupEnd());
+
+					let shouldUseSourceVolumeNumbers = false;
 					if (owned < ownedsource) {
+						shouldUseSourceVolumeNumbers = true;
+					} else if (owned === ownedsource) {
+						if (preordered < preorderedsource) {
+							shouldUseSourceVolumeNumbers = true;
+						}
+					}
+
+					if (shouldUseSourceVolumeNumbers) {
 						owned = ownedsource;
 						read = readsource;
 						preordered = preorderedsource;
@@ -4289,6 +4302,13 @@
 						usingSourceStatusAsDefault = true;
 					}
 					this.setOwned(owned); this.setRead(read); this.setPrecount(preordered);
+					
+					if (debug) {
+						console.group("Volume counts");
+						console.log("shouldUseSourceVolumeNumbers", shouldUseSourceVolumeNumbers);
+						console.log("owned", owned, "read", read, "preordered", preordered, "available", available);
+						console.groupEnd();
+					}
 
 					if (earliestPreorder) {
 						var text = earliestPreorder.format("YYYY/MM/DD");
@@ -4329,15 +4349,20 @@
 				}
 
 				//Automatically set new status for valid (non-sticky) statuses
+				debug && console.group("Status");
 				if (!isStatusSticky) {
+					let newStatusKey = 'Avail';
 					if (read < owned) {
-						this.setStatus( BookSeriesDO.Enum.Status.Backlog );
-					} else if (available === owned + preordered) {
-						this.setStatus( BookSeriesDO.Enum.Status["✔"] );
-					} else {
-						this.setStatus( BookSeriesDO.Enum.Status.Avail );
+						newStatusKey = "Backlog";
+					} else if (available <= owned + preordered) {
+						newStatusKey = "✔";
 					}
+					this.setStatus( BookSeriesDO.Enum.Status[newStatusKey] );
+					(debug && console.log("New status:", newStatusKey));
+				} else {
+					(debug && console.log("Keeping current status"));
 				}
+				debug && console.groupEnd();
 
 				//Set preorder bool
 				this.setPreorder( !!(preordered>0) );
