@@ -1,6 +1,12 @@
 (function(){
 	/*
 
+	## To use a different dataset
+
+		First, just to be on the safe side, make a backup of your working dataset.
+
+		Then, add `&dataset=` to the url just after `type=bookseries`, followed by the suffix of the dataset you want to use. For example `&dataset=test` will use the data file `data_bookseries_test.json`.
+
 	## To query from console
 
 		Some quick examples:
@@ -1270,13 +1276,11 @@
 							$notes.text(notes);
 							break;
 						case this.__static.Enum.Status.Source:
-							var text = "JP";
-							if (notes) {
-								text = notes;
-							} else if (this.hasReleaseDate()) {
-								text = this.getReleaseDateShort();
+							if (this.hasReleaseDate()) {
+								$notes.text(this.getReleaseDateShort());
+							} else {
+								$notes.text("JP");
 							}
-							$notes.text(text);
 							break;
 					}
 				}
