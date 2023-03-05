@@ -7,12 +7,15 @@
 	"search_providers": [
 		{
 			"enabled": true, // default true
-			"name": "Example", // "Search in Foo"
+			"name": "Example", // "Search in Example"
+			"label": "Open with something", // by default, "Search in %name%". %name% placeholder available
+			"icon": "icon-tag", // default icon-search, from https://getbootstrap.com/2.3.2/base-css.html#icons
 			"url": "http://my-service.example/?search=%search%", // Use %search% as a placeholder for the search term
 			"showInVolumeSearch": true, // default true
 			"showInSeriesSearch": true, // default true
 			"showInNonSource": true, // default true
 			"showInSource": true, // default true
+			"identifySourceActions": true, // default true
 		},
 	],
 

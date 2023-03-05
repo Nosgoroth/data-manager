@@ -2572,7 +2572,7 @@
 				options = Object.assign({}, {
 					volumeNumber: null,
 					isTypeVolume: false,
-					searchActionLabel: "Search in %name%",
+					searchActionLabel: null,
 					showSource: true,
 					showNonSource: true,
 				}, options);
@@ -2583,17 +2583,18 @@
 					: BookSeriesCustomSearchProvider.makeSeriesSearch()
 					;
 				providers.forEach(x => {
+					let searchActionLabel;
 					const showForNonSource = x.shouldShowForSourceType(false);
 					const showForSource = x.shouldShowForSourceType(true);
 					const searchTerm = this.getSearchTerm(options.volumeNumber, false);
 					const searchTermSource = this.getSearchTerm(options.volumeNumber, true);
-					if (showForNonSource && showForSource && searchTerm && searchTermSource && options.showSource && options.showNonSource) {
-						actions.push(x.makeSearchAction(searchTerm, options.searchActionLabel));
-						actions.push(x.makeSearchAction(searchTermSource, options.searchActionLabel+" (source)"));
-					} else if (showForNonSource && searchTerm && options.showNonSource) {
-						actions.push(x.makeSearchAction(searchTerm, options.searchActionLabel));
-					} else if (showForSource && searchTermSource && options.showSource) {
-						actions.push(x.makeSearchAction(searchTermSource, options.searchActionLabel));
+					if (showForNonSource && searchTerm && options.showNonSource) {
+						searchActionLabel = options.searchActionLabel ?? x.getActionLabel(false);
+						actions.push(x.makeSearchAction(searchTerm, searchActionLabel, false));
+					}
+					if (showForSource && searchTermSource && options.showSource) {
+						searchActionLabel = options.searchActionLabel ?? x.getActionLabel(true);
+						actions.push(x.makeSearchAction(searchTermSource, searchActionLabel, true));
 					}
 				});
 				return actions.filter(x => x?.url);
@@ -5824,22 +5825,32 @@ window.BookSeriesCustomSearchProvider = DataObjects.createDataObjectType({
 	types: {
 		enabled: "boolean",
 		name: "string",
+		label: "string",
+		icon: "string",
 		url: "string",
 		showInVolumeSearch: "boolean",
 		showInSeriesSearch: "boolean",
 		showInNonSource: "boolean",
-		showInSource: "boolean"
+		showInSource: "boolean",
+		identifySourceActions: "boolean"
 	},
 	extraPrototype: {
 		makeUrlForSearchTerm: function(searchTerm){
 			return this.getUrl().replace("%search%", encodeURIComponent(searchTerm));
 		},
-		makeSearchAction: function(searchTerm, labelTemplate) {
-			labelTemplate = labelTemplate ?? "Search in %name%";
+		getActionLabel: function(isSource) {
+			let label = this.getLabel("Search in %name%");
+			if (isSource && this.isIdentifySourceActions(true)) {
+				label += " (src)"
+			}
+			return label;
+		},
+		makeSearchAction: function(searchTerm, labelTemplate, isSource) {
+			labelTemplate = labelTemplate ?? this.getActionLabel(isSource);
 			return {
 				url: this.makeUrlForSearchTerm(searchTerm),
 				label: labelTemplate.replace("%name%",this.getName("Custom")),
-				icon: "icon-search",
+				icon: this.getIcon("icon-search"),
 			};
 		},
 		shouldShowForSourceType: function(isSource) {
