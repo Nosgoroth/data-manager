@@ -1,5 +1,20 @@
 {
 	// Copy as 'config/BookSeriesDO.json' and edit.
+	// Yes, line comments and trailing commas are allowed here.
+
+	// Custom search providers:
+
+	"search_providers": [
+		{
+			"enabled": true, // default true
+			"name": "Example", // "Search in Foo"
+			"url": "http://my-service.example/?search=%search%", // Use %search% as a placeholder for the search term
+			"showInVolumeSearch": true, // default true
+			"showInSeriesSearch": true, // default true
+			"showInNonSource": true, // default true
+			"showInSource": true, // default true
+		},
+	],
 
 	// Options for calculating reading list scores:
 
@@ -13,6 +28,4 @@
 	"readinglist_score_latestrecent": 2, // If latest unread book bought is recent, added to score multiplied by number of months since release of latest unread book in series
 	"readinglist_score_caughtup": 2,
 	"readinglist_score_caughtup_finished": 5,
-
-	"_": ""
 }

@@ -765,7 +765,7 @@
 				}
 				if (store === BookSeriesDO.Enum.Store.JNC) {
 					values.unshift(
-						{ url: jncLink, label: "Search on JNC", icon: 'icon-search', },
+						{ url: jncLink, label: "Search in JNC", icon: 'icon-search', },
 					);
 				}
 
@@ -1862,10 +1862,12 @@
 				var koboslinkvolnext = this.parent.getKoboSearchLink(this.getColorder()+1);
 				var nextKoboId = this.nextVolumeDO ? this.nextVolumeDO.getKoboId() : null;
 
+				
+
 				//console.log(this.parent.getName(), this.getColorder(), mainAsin, "|", !!this.nextVolumeDO, nextasin, !!slinkvolnext, nextasinsrc, !!slinksrcvolnext);
 
 				if (koboslinkvolnext && koboId && !nextKoboId) {
-					addOption().html('<i class="icon-shopping-cart"></i> Search next on Kobo').attr({
+					addOption().html('<i class="icon-shopping-cart"></i> Search next in Kobo').attr({
 						href: koboslinkvolnext,
 						target: "_blank"
 					});
@@ -1873,26 +1875,44 @@
 				}
 
 				if (slinkvolnext && mainAsin && !nextasin && !nextasinsrc) {
-					addOption().html('<i class="icon-shopping-cart"></i> Search next on Amazon').attr({
+					addOption().html('<i class="icon-shopping-cart"></i> Search next in Amazon').attr({
 						href: slinkvolnext,
 						target: "_blank"
 					});
 					anyNextVolumeSearchLinkShown = true;
 				}
 				if (slinksrcvolnext && !nextasinsrc) {
-					addOption().html('<i class="icon-shopping-cart"></i> Search next on Amazon JP').attr({
+					addOption().html('<i class="icon-shopping-cart"></i> Search next in Amazon JP').attr({
 						href: slinksrcvolnext,
 						target: "_blank"
 					});
 					anyNextVolumeSearchLinkShown = true;
 				}
+
+				if (!this.nextVolumeDO) {
+
+					const customnextsearchactions = this.parent.getCustomVolumeSearchActions({
+						volumeNumber: this.getColorder()+1,
+						searchActionLabel: "Search next in %name%"
+					});
+					if (customnextsearchactions) {
+						for (let searchAction of customnextsearchactions) {
+							if (!searchAction?.url) { continue; }
+							addOption()
+								.html(`<i class="${searchAction.icon}"></i> ${searchAction.label}`)
+								.attr({
+									href: searchAction.url,
+									target: "_blank"
+								})
+								;
+							anyNextVolumeSearchLinkShown = true;
+						}
+					}
+				}
+
 				if (anyNextVolumeSearchLinkShown) {
 					addSeparator();
 				}
-
-
-
-
 
 				const _releaseDate = this.getReleaseDateMoment();
 				if ([this.__static.Enum.Status.Preorder,
@@ -2474,15 +2494,23 @@
 					;
 				
 				const values = [
-					{ url: jncLink, label: "Search on JNC", icon: 'icon-shopping-cart', },
-					{ url: amazonLink, label: "Search on Amazon", icon: 'icon-shopping-cart', },
-					{ url: amazonPhysLink, label: "Search on Amazon (Phys)", icon: 'icon-shopping-cart', },
-					{ url: koboLink, label: "Search on Kobo", icon: 'icon-shopping-cart', },
-					{ url: rightstufLink, label: "Search on Rightstuf", icon: 'icon-shopping-cart', },
-					{ url: yenpressLink, label: "Search on Yen Press", icon: 'icon-search', },
-					{ url: prhLink, label: "Search on Penguin", icon: 'icon-search', },
-					{ url: googleAmazonLink, label: "Search on Amazon w/Google", icon: 'icon-search', },
+					{ url: jncLink, label: "Search in JNC", icon: 'icon-shopping-cart', },
+					{ url: amazonLink, label: "Search in Amazon", icon: 'icon-shopping-cart', },
+					{ url: amazonPhysLink, label: "Search in Amazon (Phys)", icon: 'icon-shopping-cart', },
+					{ url: koboLink, label: "Search in Kobo", icon: 'icon-shopping-cart', },
+					{ url: rightstufLink, label: "Search in Rightstuf", icon: 'icon-shopping-cart', },
+					{ url: yenpressLink, label: "Search in Yen Press", icon: 'icon-search', },
+					{ url: prhLink, label: "Search in Penguin", icon: 'icon-search', },
+					{ url: googleAmazonLink, label: "Search in Amazon w/Google", icon: 'icon-search', },
 				];
+
+				const customProviderActions = this.getCustomVolumeSearchActions({
+					volumeNumber: volumeNumber,
+					showSource: false,
+				});
+				if (customProviderActions) {
+					values.push(...customProviderActions)
+				}
 
 				return values.filter(x => !!x.url);
 			},
@@ -2509,25 +2537,93 @@
 
 				//console.log(volumeNumber, amazonLink);
 
-				return [
-					{ url: amazonLink, label: "Search on Amazon JP", icon: 'icon-shopping-cart', },
-					{ url: amazonPhysLink, label: "Search on Amazon JP (Phys)", icon: 'icon-shopping-cart', },
-					{ url: googleAmazonLink, label: "Search on Amazon JP w/Google", icon: 'icon-search', },
-				].filter(x => !!x.url);
+				const values = [
+					{ url: amazonLink, label: "Search in Amazon JP", icon: 'icon-shopping-cart', },
+					{ url: amazonPhysLink, label: "Search in Amazon JP (Phys)", icon: 'icon-shopping-cart', },
+					{ url: googleAmazonLink, label: "Search in Amazon JP w/Google", icon: 'icon-search', },
+				];
+
+				const customProviderActions = this.getCustomVolumeSearchActions({
+					volumeNumber: volumeNumber,
+					showNonSource: false
+				});
+				if (customProviderActions) {
+					values.push(...customProviderActions)
+				}
+
+				return values.filter(x => !!x.url);
+			},
+
+
+			getCustomVolumeSearchActions: function(options) {
+				options = Object.assign({}, options, {
+					isTypeVolume: true,
+				});
+				return this.getCustomSearchActions(options);
+			},
+			getCustomSeriesSearchActions: function(options) {
+				options = Object.assign({}, options, {
+					isTypeVolume: false,
+					volumeNumber: null,
+				});
+				return this.getCustomSearchActions(options);
+			},
+			getCustomSearchActions: function(options) {
+				options = Object.assign({}, {
+					volumeNumber: null,
+					isTypeVolume: false,
+					searchActionLabel: "Search in %name%",
+					showSource: true,
+					showNonSource: true,
+				}, options);
+
+				const actions = [];
+				const providers = options.isTypeVolume
+					? BookSeriesCustomSearchProvider.makeVolumeSearch()
+					: BookSeriesCustomSearchProvider.makeSeriesSearch()
+					;
+				providers.forEach(x => {
+					const showForNonSource = x.shouldShowForSourceType(false);
+					const showForSource = x.shouldShowForSourceType(true);
+					const searchTerm = this.getSearchTerm(options.volumeNumber, false);
+					const searchTermSource = this.getSearchTerm(options.volumeNumber, true);
+					if (showForNonSource && showForSource && searchTerm && searchTermSource && options.showSource && options.showNonSource) {
+						actions.push(x.makeSearchAction(searchTerm, options.searchActionLabel));
+						actions.push(x.makeSearchAction(searchTermSource, options.searchActionLabel+" (source)"));
+					} else if (showForNonSource && searchTerm && options.showNonSource) {
+						actions.push(x.makeSearchAction(searchTerm, options.searchActionLabel));
+					} else if (showForSource && searchTermSource && options.showSource) {
+						actions.push(x.makeSearchAction(searchTermSource, options.searchActionLabel));
+					}
+				});
+				return actions.filter(x => x?.url);
+			},
+
+
+			getSearchTerm: function(volumeNumber, isSource) {
+				var kss = (!isSource)
+					? this.getKindleSearchString()
+					: this.getKindleSearchStringSource()
+					;
+				if (!kss) { return null; }
+				if (volumeNumber) {
+					kss += " "+volumeNumber;
+				}
+				return kss;
+			},
+			getSearchTermSource: function(volumeNumber) {
+				return this.getSearchTerm(volumeNumber, true);
 			},
 
 			getJNovelClubSearchLink: function(){
-				const kss = this.getKindleSearchString();
+				const kss = this.getSearchTerm();
 				if (!kss) { return null; }
 				return `https://j-novel.club/series?search=${ encodeURIComponent(kss) }`;
 			},
 
 			getKindleSearchLink: function(volumeNumber, asPhysicalBook){
-				var kss = this.getKindleSearchString();
+				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
 				if (asPhysicalBook) {
 					//return "https://smile.amazon.com/s?i=stripbooks-intl-ship&s=date-desc-rank&field-keywords=" + encodeURIComponent(kss);
 					return "https://smile.amazon.com/s?k="+encodeURIComponent(kss)+"&i=stripbooks";
@@ -2537,11 +2633,8 @@
 				}
 			},
 			getKindleSearchLinkSource: function(volumeNumber, asPhysicalBook){
-				var kss = this.getKindleSearchStringSource();
+				var kss = this.getSearchTerm(volumeNumber, true);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
 				if (asPhysicalBook) {
 					return "https://www.amazon.co.jp/s?k="+encodeURIComponent(kss)+"&i=stripbooks";
 				} else {
@@ -2549,35 +2642,23 @@
 				}
 			},
 			getGoogleKindleSearchLink: function(volumeNumber){
-				var kss = this.getKindleSearchString();
+				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
 				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.com`;
 			},
 			getGoogleKindleSearchLinkSource: function(volumeNumber){
-				var kss = this.getKindleSearchStringSource();
+				var kss = this.getSearchTerm(volumeNumber, true);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
 				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.co.jp`;
 			},
 			getYenPressSearchLink: function(volumeNumber){
-				var kss = this.getKindleSearchString();
+				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
 				return `https://yenpress.com/search-list/?keyword=${ encodeURIComponent(kss) }`;
 			},
 			getKoboSearchLink: function(volumeNumber){
-				var kss = this.getKindleSearchString();
+				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
 
 				const ekss = encodeURIComponent(kss)
 					.replace("’", "%27");
@@ -2590,11 +2671,9 @@
 				}
 			},
 			getRightstufSearchLink: function(volumeNumber) {
-				var kss = this.getKindleSearchString();
+				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
+
 				const type = this.getType();
 				let typeInUrl;
 				switch (type) {
@@ -2611,11 +2690,9 @@
 				return `https://www.rightstufanime.com/${typeInUrl}?keywords=${ encodeURIComponent(kss) }`;
 			},
 			getPenguinRandomHouseSearchLink: function(volumeNumber, imprint) {
-				var kss = this.getKindleSearchString();
+				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				if (volumeNumber) {
-					kss += " "+volumeNumber;
-				}
+
 				let url = `https://www.penguinrandomhouse.ca/search?q=${ encodeURIComponent(kss) }`;
 				if (!imprint && this.getPublisher() === this.__static.Enum.Publisher["Seven Seas"]) {
 					if (this.getType() === this.__static.Enum.Type.Novel) {
@@ -5396,17 +5473,32 @@
 								});
 							}
 							if (this.getKindleSearchLink()) {
-								addOption().html('<i class="icon-shopping-cart"></i> Search on Amazon').attr({
+								addOption().html('<i class="icon-shopping-cart"></i> Search in Amazon').attr({
 									href: this.getKindleSearchLink(),
 									target: "_blank"
 								});
 							}
 							if (this.getKindleSearchLinkSource()) {
-								addOption().html('<i class="icon-shopping-cart"></i> Search on Amazon JP').attr({
+								addOption().html('<i class="icon-shopping-cart"></i> Search in Amazon JP').attr({
 									href: this.getKindleSearchLinkSource(),
 									target: "_blank"
 								});
 							}
+
+							const customsearchactions = this.getCustomSeriesSearchActions();
+							if (customsearchactions) {
+								for (let searchAction of customsearchactions) {
+									if (!searchAction?.url) { continue; }
+									addOption()
+										.html(`<i class="${searchAction.icon}"></i> ${searchAction.label}`)
+										.attr({
+											href: searchAction.url,
+											target: "_blank"
+										})
+										;
+								}
+							}
+
 
 
 							addSeparator();
@@ -5724,3 +5816,53 @@ BookSeriesDO.setDummyReadDates = function() {
 	});
 }
 
+
+
+
+window.BookSeriesCustomSearchProvider = DataObjects.createDataObjectType({
+	name: "BookSeriesCustomSearchProvider",
+	types: {
+		enabled: "boolean",
+		name: "string",
+		url: "string",
+		showInVolumeSearch: "boolean",
+		showInSeriesSearch: "boolean",
+		showInNonSource: "boolean",
+		showInSource: "boolean"
+	},
+	extraPrototype: {
+		makeUrlForSearchTerm: function(searchTerm){
+			return this.getUrl().replace("%search%", encodeURIComponent(searchTerm));
+		},
+		makeSearchAction: function(searchTerm, labelTemplate) {
+			labelTemplate = labelTemplate ?? "Search in %name%";
+			return {
+				url: this.makeUrlForSearchTerm(searchTerm),
+				label: labelTemplate.replace("%name%",this.getName("Custom")),
+				icon: "icon-search",
+			};
+		},
+		shouldShowForSourceType: function(isSource) {
+			return !!(isSource
+				? this.isShowInSource(true)
+				: this.isShowInNonSource(true)
+			);
+		}
+	},
+	extraStatic: {
+		primaryKey: "name",
+		_getCustomConfig: function() {
+			return BookSeriesDO.getConfigValue("search_providers", []);
+		},
+		makeAll: function() {
+			return this._getCustomConfig().map(x => this.DO(x)).filter(x => !!x.isEnabled(true));
+		},
+		makeSeriesSearch: function() {
+			return this.makeAll().filter(x => !!x.isShowInSeriesSearch(true));
+		},
+		makeVolumeSearch: function() {
+			return this.makeAll().filter(x => !!x.isShowInVolumeSearch(true));
+		},
+
+	},
+});

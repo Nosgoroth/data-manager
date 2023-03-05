@@ -90,10 +90,8 @@ require_once("common.php");
 						continue;
 					}
 					$c = @file_get_contents($configFile);
-					$c = preg_replace('!/\*.*?\*/!s', '', $c); // Strip multi-line comments
-					$c = preg_replace('!//.*!', '', $c); // Strip single-line comments
-					$c = preg_replace('/\n\s*\n/', "\n", $c);  //Remove empty-lines
-					$d = @json_decode($c);
+					//$c = preg_replace('/\n\s*\n/', "\n", $c);  //Remove empty-lines
+					$d = @json_clean_decode($c);
 					if (!$d) {
 						throw new Exception("Invalid JSON in config file $configFile");
 					}
