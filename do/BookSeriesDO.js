@@ -2655,7 +2655,7 @@
 			getYenPressSearchLink: function(volumeNumber){
 				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				return `https://yenpress.com/search-list/?keyword=${ encodeURIComponent(kss) }`;
+				return `https://yenpress.com/search?q=${ encodeURIComponent(kss) }`;
 			},
 			getKoboSearchLink: function(volumeNumber){
 				var kss = this.getSearchTerm(volumeNumber);
