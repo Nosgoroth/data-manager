@@ -594,7 +594,7 @@ function getStatDetailsForMonth(dateCols, monthKey) {
 			read_from_backlog.push(r);
 		}
 	});
-	bought.forEach(b => {
+	bought?.forEach(b => {
 		if (!bought_and_read.includes(b)) {
 			added_to_backlog.push(b);
 		}
