@@ -219,23 +219,20 @@
 	}
 	window.timeSinceShort = timeSinceShort;
 
+	function drawPubGraph_transformDataSeries(series) {
+		return series?.map((v) => {
+			return {
+				x: v[0] + 1000*60*60*12,
+				y: v[1],
+				z: v[2]
+			}
+		});
+	}
+
 
 	function drawPubGraph(container, data, isFinished) {
-
-		const dataJP = data.jp.map(function(v) {
-			return {
-				x: v[0] + 1000*60*60*12,
-				y: v[1],
-				z: v[2]
-			}
-		});
-		const dataEN = data.en.map(function(v) {
-			return {
-				x: v[0] + 1000*60*60*12,
-				y: v[1],
-				z: v[2]
-			}
-		});
+		const dataJP = drawPubGraph_transformDataSeries(data.jp);
+		const dataEN = drawPubGraph_transformDataSeries(data.en);
 
 		const now = moment();
 
@@ -262,7 +259,11 @@
 			});
 		}
 
-
+		const genericDataLabelDefinition = {
+	        	enabled: true,
+	        	format: "{point.z}",
+	        	style: { fontSize: "10px", fontWeight: "normal" }
+	        };
 
 		Highcharts.chart(container, {
 		    chart: { type: 'spline' },
@@ -289,7 +290,7 @@
 		    },
 		    tooltip: {
 		        headerFormat: 'Volume <b>{point.y}</b> ({series.name})<br/>',
-		        pointFormat: 'Publish date {point.x:%e/%b/%Y}'
+		        pointFormat: '{point.x:%e/%b/%Y}'
 		    },
 		    plotOptions: {
 		        spline: {
@@ -302,21 +303,31 @@
 		        name: "JP",
 		        color: "#584CCB",
 		        data: dataJP,
-		        dataLabels: {
-		        	enabled: true,
-		        	format: "{point.z}",
-		        	style: { fontSize: "10px", fontWeight: "normal" }
-		        }
+		        dataLabels: genericDataLabelDefinition,
+		        visible: BookSeriesDO.getConfigValue("graphSeriesDefaultState_jp", true),
 		    }, {
 		        name: "EN",
 		        color: "#85CD8F",
 		        data: dataEN,
-		        dataLabels: {
-		        	enabled: true,
-		        	format: "{point.z}",
-		        	style: { fontSize: "10px", fontWeight: "normal" }
-		        }
-		    }]
+		        dataLabels: genericDataLabelDefinition,
+		        visible: BookSeriesDO.getConfigValue("graphSeriesDefaultState_en", true),
+		    },
+
+		    ...([
+		    	{ id: "readen", name: "Read (EN)" },
+		    	{ id: "readjp", name: "Read (JP)" },
+		    	{ id: "boughten", name: "Bought (EN)" },
+		    	{ id: "boughtjp", name: "Bought (JP)" },
+		    	{ id: "preorderen", name: "Preorder (EN)" },
+		    	{ id: "preorderjp", name: "Preorder (JP)" },
+		    ].map(x => (data[x.id]?.length ? {
+		    	name: x.name,
+		    	data: drawPubGraph_transformDataSeries(data[x.id]),
+		        dataLabels: genericDataLabelDefinition,
+		        visible: BookSeriesDO.getConfigValue("graphSeriesDefaultState_"+x.id, false),
+		    } : null)).filter(x => !!x)),
+
+		    ]
 		});
 	}
 
@@ -3750,6 +3761,9 @@
 				}
 
 				var jp = [], en = [], jpdate = [], endate = [];
+				var readjp = [], readen = [],
+					boughtjp = [], boughten = [],
+					preorderjp = [], preorderen = [];
 				var volumesCOL = this.getVolumes();
 
 				volumesCOL = volumesCOL.filter(x => !x.isTreatAsNotSequential());
@@ -3762,7 +3776,13 @@
 					var volumeDO = volumesCOL[i],
 						colorder = volumeDO.getColorder(),
 						releasejp = volumeDO.getReleaseDateSourceMoment(),
-						releaseen = volumeDO.getReleaseDateMoment()
+						releaseen = volumeDO.getReleaseDateMoment(),
+						v_readen = volumeDO.getReadDateMoment(),
+						v_readjp = volumeDO.getReadDateSourceMoment(),
+						v_boughten = volumeDO.getPurchasedDateMoment(),
+						v_boughtjp = volumeDO.getPurchasedDateSourceMoment()
+						v_preorderen = volumeDO.getPreorderDateMoment(),
+						v_preorderjp = volumeDO.getPreorderDateSourceMoment()
 						;
 
 					/*
@@ -3779,6 +3799,13 @@
 						en.push([ releaseen.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]);
 						endate.push(releaseen);
 					}
+
+					if (v_readen) { readen.push([ v_readen.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]) }
+					if (v_readjp) { readjp.push([ v_readjp.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]) }
+					if (v_boughten) { boughten.push([ v_boughten.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]) }
+					if (v_boughtjp) { boughtjp.push([ v_boughtjp.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]) }
+					if (v_preorderen) { preorderen.push([ v_preorderen.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]) }
+					if (v_preorderjp) { preorderjp.push([ v_preorderjp.unix()*1000, colorder, volumeDO.getCollectionOrderLabel() ]) }
 
 					if (releaseen && releasejp) {
 						leadtimes.push( releaseen.diff(releasejp, 'seconds') );
@@ -3888,7 +3915,14 @@
 					maxjp: maxjp,
 					maxen: maxen,
 					leadtimes: leadtimes,
-					COL: volumesCOL
+					COL: volumesCOL,
+
+					readen: readen,
+					readjp: readjp,
+					boughten: boughten,
+					boughtjp: boughtjp,
+					preorderen: preorderen,
+					preorderjp: preorderjp,
 				};
 
 				return this._pubGraphData;

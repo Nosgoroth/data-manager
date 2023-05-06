@@ -19,6 +19,15 @@
 		},
 	],
 
+	"graphSeriesDefaultState_jp": true,
+	"graphSeriesDefaultState_en": true,
+	"graphSeriesDefaultState_readjp": false,
+	"graphSeriesDefaultState_readen": false,
+	"graphSeriesDefaultState_boughtjp": false,
+	"graphSeriesDefaultState_boughten": false,
+	"graphSeriesDefaultState_preorderjp": false,
+	"graphSeriesDefaultState_preorderen": false,
+
 	// Options for calculating reading list scores:
 
 	"readinglist_score_highlight": 3, // Added to score when series is marked as highlight
