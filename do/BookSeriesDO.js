@@ -5864,6 +5864,53 @@ BookSeriesDO.setDummyReadDates = function() {
 	});
 }
 
+BookSeriesDO.performUpdate = function(callbackForSeries) {
+
+	const bookSeriesCOL = window.customMultiDataObjectEditor._editor._COL;
+
+	bookSeriesCOL.forEach(callbackForSeries);
+
+	console.log(bookSeriesCOL);
+	if (confirm("Save?")) {
+		window.customMultiDataObjectEditor.saveAndUpdate();
+	}
+
+}
+
+
+BookSeriesDO.bulkUpdateSeries = function(conditionCallback, actionCallback) {
+	BookSeriesDO.performUpdate(seriesDO => {
+		if (conditionCallback(seriesDO)) {
+			actionCallback(seriesDO);
+			console.log("Changed status for "+seriesDO.getName());
+		}
+	});
+}
+
+BookSeriesDO.bulkUpdateVolume = function(conditionCallback, actionCallback) {
+	BookSeriesDO.performUpdate(seriesDO => {
+		const volumesCOL = seriesDO.getVolumes();
+		let saveSeries = false;
+		volumesCOL.forEach(volumeDO => {
+			if (conditionCallback(volumeDO, seriesDO)) {
+				actionCallback(volumeDO, seriesDO);
+				saveSeries = true;
+				console.log("Changed status for "+volumeDO.getFullName());
+			}
+		});
+		if (saveSeries) {
+			seriesDO.saveVolumesFromCOL(volumesCOL, true);
+		}
+	});
+}
+
+BookSeriesDO.bulkUpdateVolumeStatus = function(fromStatus, toStatus) {
+	BookSeriesDO.bulkUpdateVolume(
+		(volumeDO, seriesDO) => (volumeDO.getStatus() === fromStatus),
+		(volumeDO, seriesDO) => volumeDO.setStatus(toStatus),
+	);
+}
+
 
 
 
