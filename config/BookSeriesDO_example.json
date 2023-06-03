@@ -2,6 +2,8 @@
 	// Copy as 'config/BookSeriesDO.json' and edit.
 	// Yes, line comments and trailing commas are allowed here.
 
+	"defaultStatus": null,
+
 	// Custom search providers:
 
 	"search_providers": [

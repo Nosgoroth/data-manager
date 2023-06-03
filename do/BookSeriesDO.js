@@ -1124,9 +1124,10 @@
 					case "back": case "backlog": return 2;
 					case "pre": case "preorder": return 3;
 					case "phys": return 4;
-					case "none": default: return 5;
+					case "none": return 5;
 					case "source": case "src": case "jp": return 6;
 					case "available": case "avail": case "av": return 7;
+					default: return BookSeriesDO.getConfigValue("defaultStatus", null);
 				}
 			},
 			getBestReleaseDate: function(){
@@ -3548,7 +3549,7 @@
 				const lastVolumeColorder = lastVolume?.getColorder();
 				data = Object.shallowExtend({
 					// Defaults
-					status: BookSeriesVolumeDO.Enum.Status.None,
+					status: BookSeriesDO.getConfigValue("defaultStatus", null),
 				}, data, {
 					// Overwrites data
 					colorder: lastVolumeColorder ? lastVolumeColorder + 1 : 1,
