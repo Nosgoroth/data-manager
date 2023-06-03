@@ -4952,6 +4952,11 @@
 					caughtUpFinished: 	BookSeriesDO.getConfigValue("readinglist_score_caughtup_finished", 3),
 				};
 
+				const ignore = {
+					regular: BookSeriesDO.getConfigValue("readinglist_ignore_status", false),
+					source: BookSeriesDO.getConfigValue("readinglist_ignore_sourcestatus", false),
+				};
+
 				let volumesCOL = [];
 				this._COL.forEach(function(bookSeriesDO){
 
@@ -4963,25 +4968,32 @@
 					}
 
 					const seriesVolumesCOL = bookSeriesDO.getVolumes();
-					const unreadVolumesCOL = seriesVolumesCOL.filter(x => x.getStatus() === BSVEnumStatus.Backlog || x.getStatusSource() === BSVEnumStatusSource.Backlog);
+					const unreadVolumesCOL = seriesVolumesCOL.filter(x => {
+						return (!ignore.regular && x.getStatus() === BSVEnumStatus.Backlog)
+							|| (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Backlog)
+					});
 
 					if (unreadVolumesCOL.length === 0) { return; }
 
 					const unreadOrAvailVolumesCOL = seriesVolumesCOL.filter(x => {
-						return [
-							BSVEnumStatus.Backlog,
-							BSVEnumStatus.Available,
-						].includes(x.getStatus()) || [
-							BSVEnumStatusSource.Backlog,
-							BSVEnumStatusSource.Available,
-						].includes(x.getStatusSource());
+						return (!ignore.regular && [
+								BSVEnumStatus.Backlog,
+								BSVEnumStatus.Available,
+							].includes(x.getStatus()))
+							|| (!ignore.source && [
+								BSVEnumStatusSource.Backlog,
+								BSVEnumStatusSource.Available,
+							].includes(x.getStatusSource()))
+							;
 					});
 					const preorderVolumesCOL = seriesVolumesCOL.filter(x => {
-						return [
-							BSVEnumStatus.Preorder,
-						].includes(x.getStatus()) || [
-							BSVEnumStatusSource.Preorder,
-						].includes(x.getStatusSource());
+						return (!ignore.regular && [
+								BSVEnumStatus.Preorder,
+							].includes(x.getStatus()))
+							|| (!ignore.source && [
+								BSVEnumStatusSource.Preorder,
+							].includes(x.getStatusSource()))
+							;
 					});
 
 					const volumeDO = unreadVolumesCOL[0];
