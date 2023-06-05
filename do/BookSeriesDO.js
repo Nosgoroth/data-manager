@@ -1512,6 +1512,7 @@
 				$dataContent = $content.appendR('<div class="dataContent">');
 
 				const title = this.getFullName();
+				const seriesName = this.parent ? this.parent.getName() : title;
 
 				$dataContent.appendR('<p class="title">').text(title);
 
@@ -1593,9 +1594,26 @@
 					$dataContent.appendR('<p class="notes">').text(notes);
 				}
 
-				if (this._scoreDisplay && this.__static.shouldDisplayBacklogScore) {
-					$dataContent.appendR('<p class="scoreDisplay">').text(`[${ this._scoreDisplay }]`);
+				if (this._scoreDisplay && BookSeriesDO.getConfigValue("readinglist_display_score", false)) {
+					$dataContent.appendR('<p class="scoreDisplay">')
+						.text(`[${ this._scoreDisplay }]`)
+						.click(e => {
+							e.preventDefault();
+							e.stopPropagation();
+							if (!this._scoreBreakdown) { return; }
+							alert(
+								"Score breakdown for "+seriesName+":\n\n"
+								+this._scoreBreakdown.map(x => {
+									return Math.round(10*x.value)/10 + " "
+										+ (x.calculation ? " = "+x.calculation+" " : "")
+										+ (x.description ? "("+x.description+")" : "")
+										;
+								}).join("\n")
+							);
+						})
+						;
 				}
+				//  
 
 				let dateMoment;
 				switch (options.dateType) {
@@ -2290,8 +2308,6 @@
 					"preorderDateSource", // "purchasedDateSource", "readDateSource",
 				]
 			},
-
-			shouldDisplayBacklogScore: false,
 
 			sortByReleaseDate: function(volumesCOL, reverse) {
 				volumesCOL.sort(function(aDO, bDO){
@@ -5011,7 +5027,7 @@
 						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
 						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
 						timeSinceLatest: moment().diff(latestOwned.getBestReleaseDateMoment(), 'months', true),
-						caughtUp: (latestVolumeSource.getColorder() === latestOwned.getColorder()),
+						caughtUp: (latestVolumeSource.getColorder() === latestOwned.getColorder() && !ignore.regular),
 						finished: bookSeriesDO.isFinishedPublication()
 					};
 
@@ -5038,20 +5054,59 @@
 						note = note.charAt(0).toUpperCase() + note.slice(1);
 					}
 
-					const score = (
-						+ (bookSeriesDO.isHighlight() ? weights.highlight : 0) // Bonus if series is a highlight
-						+ (volumeDO.getColorder() === 1 ? weights.firstVolume : 0) // Extra for volume ones
-						+ (weights.preorder * c.preorder) // Active preorders means you should get up to date
-						+ (weights.extraUnread * c.plusUnread) // Smaller bonus for accumulated series
-						+ (weights.available * c.avail) // Negative bonus if you haven't been buying the latest releases
-						+ (weights.monthsSince * c.timeSince) // The longer you've let it sit, the less likely you are to want to get back to it
-						+ (c.timeSinceLatest < weights.recentMonths ? weights.latestRecent : 0) // Bonus for latest volume released in last week
-						+ (c.caughtUp ? weights.caughtUp : 0)
-						+ (c.caughtUp && c.finished ? weights.caughtUpFinished : 0)
+					const scoreBreakdown = [
+						{
+							description: "Active preorders means you should get up to date",
+							calculation: c.preorder+" preorders * weight of "+weights.preorder,
+							value: (weights.preorder * c.preorder),
+						},
+						{
+							description: "Smaller bonus for accumulated series",
+							calculation: c.plusUnread+" unread after first * weight of "+weights.extraUnread,
+							value: (weights.extraUnread * c.plusUnread),
+						},
+						{
+							description: "Negative bonus if you haven't been buying the latest releases",
+							calculation: c.avail+" available * weight of "+weights.available,
+							value: (weights.available * c.avail),
+						},
+						{
+							description: "The longer you've let it sit, the less likely you are to come back",
+							calculation: (Math.round(100*c.timeSince)/100)+" months * weight of "+weights.monthsSince,
+							value: (weights.monthsSince * c.timeSince),
+						},
+						{
+							description: "Bonus for latest volume released in last week",
+							calculation: null,
+							value: (c.timeSinceLatest < weights.recentMonths ? weights.latestRecent : 0),
+						},
+						{
+							description: "Bonus if series is a highlight",
+							calculation: null,
+							value: (bookSeriesDO.isHighlight() ? weights.highlight : 0),
+						},
+						{
+							description: "Bonus for unread first volumes",
+							calculation: null,
+							value: (volumeDO.getColorder() === 1 ? weights.firstVolume : 0),
+						},
+						{
+							description: "Bonus if caught up to source",
+							value: (c.caughtUp ? weights.caughtUp : 0),
+						},
+						{
+							description: "Bonus if caught up and finished publication",
+							value: (c.caughtUp && c.finished ? weights.caughtUpFinished : 0),
+						},
+					];
+					const score = scoreBreakdown.reduce(
+						(acc, x) => acc + x.value,
+						0 //initial value
 					);
 
 					volumeDO._tileNote = note;
 					volumeDO._scoreDisplay = Math.floor(score*100)/100;
+					volumeDO._scoreBreakdown = scoreBreakdown;
 
 					volumeDO._score = score;
 					volumesCOL.push(volumeDO);

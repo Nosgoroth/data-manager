@@ -45,4 +45,6 @@
 
 	"readinglist_ignore_status": false,
 	"readinglist_ignore_sourcestatus": false,
+
+	"readinglist_display_score": false,
 }
