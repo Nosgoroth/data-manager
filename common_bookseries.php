@@ -70,22 +70,18 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 
 
 	function extractKindleAsin() {
+		$pos = strpos($this->raw, "tmm-grid-swatch-KINDLE");
+		if ($pos === false) { return null; }
+		$substr = substr($this->raw, $pos);
 		$matches = null;
-		preg_match("/data-tmm-see-more-editions-click=\"(\{.*\})\"/", $this->raw, $matches);
-		if (!$matches || count($matches) < 2) { return null;  }
-		$editions = json_decode(html_entity_decode($matches[1]), true);
-		if (!isset($editions["metabindingUrl"])) { return null; }
-		preg_match("/dp\/(B[\d\w]*)\//", $editions["metabindingUrl"], $matches);
+		preg_match("/href=\"\/[^\/]+\/dp\/(B[\d\w]+)\//", $substr, $matches);
 		if (!$matches || count($matches) < 2) { return null; }
 		return $matches[1];
 	}
 
 	function extractPubDate(){
 		mb_internal_encoding('UTF-8');
-		//$this->raw = '<span class="a-text-bold">出版社 &rlm; : &lrm;</span> <span> KADOKAWA (2016/1/25)</span>';
-		//$this->raw = str_replace(array("&rlm;", "&lrm;"), "", $this->raw);
 		preg_match("/出版社[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.*[\s]\(([\d\/]+)\)\</s", $this->raw, $matches);
-		//var_dump($matches); die();
 		if (count($matches) > 1) {
 			return $matches[1];
 		} else {
@@ -130,12 +126,11 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 	}
 
 	function extractKindleAsin() {
+		$pos = strpos($this->raw, "tmm-grid-swatch-KINDLE");
+		if ($pos === false) { return null; }
+		$substr = substr($this->raw, $pos);
 		$matches = null;
-		preg_match("/data-tmm-see-more-editions-click=\"(\{.*\})\"/", $this->raw, $matches);
-		if (!$matches || count($matches) < 2) { return null;  }
-		$editions = json_decode(html_entity_decode($matches[1]), true);
-		if (!isset($editions["metabindingUrl"])) { return null; }
-		preg_match("/dp\/(B[\d\w]*)\//", $editions["metabindingUrl"], $matches);
+		preg_match("/href=\"\/[^\/]+\/dp\/(B[\d\w]+)\//", $substr, $matches);
 		if (!$matches || count($matches) < 2) { return null; }
 		return $matches[1];
 	}
