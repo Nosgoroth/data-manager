@@ -31,6 +31,9 @@ abstract class BaseScraper {
 
 	protected $raw;
 	protected $id;
+	protected $debug_namespace = "";
+	protected $debug_directory = "scraper_debug";
+	protected $debug_output_ttl = 60*30; //seconds
 
 	function __construct($id) {
 		$this->id = $id;
@@ -38,11 +41,29 @@ abstract class BaseScraper {
 
 	abstract public function read($debug = false);
 
-	protected function writeRawToFile() {
-		file_put_contents("bookseries_scrape.html", $this->raw);
+	// Debug output functionality
+
+	protected function getRawOutputFilename(){
+		return "bookseries_scrape_".$this->debug_namespace."_".$this->id.".html";
 	}
-	protected function writeRawToErrorFile() {
-		file_put_contents("bookseries_scrape_error.html", $this->raw);
+	public function deleteOldRawOutput() {
+		$this->checkRawOutputDirectory();
+		$now = time();
+		foreach(glob($this->debug_directory."/*.html") as $file) {
+			if (@filemtime($file)+$this->debug_output_ttl < $now) {
+				@unlink($file);
+			}
+		}
+	}
+	protected function checkRawOutputDirectory() {
+		if (!is_dir($this->debug_directory)) {
+			mkdir($this->debug_directory);
+		}
+	}
+	protected function writeRawToFile() {
+		$this->checkRawOutputDirectory();
+		$this->deleteOldRawOutput();
+		file_put_contents($this->debug_directory."/".$this->getRawOutputFilename(), $this->raw);
 	}
 }
 
@@ -52,6 +73,8 @@ abstract class BaseAmazonScraper extends BaseScraper {
 
 
 class AmazonJpAsinScraper extends BaseAmazonScraper {
+
+	protected $debug_namespace = "amazonjp";
 
 	function read($debug = false) {
 		//return;
@@ -85,7 +108,6 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		if (count($matches) > 1) {
 			return $matches[1];
 		} else {
-			$this->writeRawToErrorFile();
 			return null;
 		}
 	}
@@ -100,6 +122,8 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 
 
 class AmazonComAsinScraper extends BaseAmazonScraper {
+
+	protected $debug_namespace = "amazoncom";
 
 	function read($debug = false) {
 		$this->raw = file_get_contents("https://smile.amazon.com/dp/".$this->id, false, stream_context_create(array(
@@ -151,7 +175,6 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 		}
 
 		//header('Content-type: text/plain'); die($this->raw);
-		$this->writeRawToErrorFile();
 		return null;
 	}
 
@@ -165,7 +188,6 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 			}
 			return $dp["day"]."/".$dp["month"]."/".$dp["year"];
 		} catch (Exception $e) {
-			$this->writeRawToErrorFile();
 			return null;
 		}
 	}
@@ -177,6 +199,8 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 
 class KoboScraper extends BaseScraper {
 
+	protected $debug_namespace = "kobo";
+
 	function read($debug = false) {
 		$this->raw = file_get_contents("https://www.kobo.com/es/en/ebook/".$this->id, false, stream_context_create(array(
 			"http" => array(
@@ -186,7 +210,7 @@ class KoboScraper extends BaseScraper {
 		        	"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
 					"Accept-Language: en-GB",
 					"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		        	"Accept-Encoding: gzip, deflate, br",
+		        	//"Accept-Encoding: gzip, deflate, br",
 		        	"Host: www.kobo.com",
 		        	"Connection: keep-alive",
 		        ))
@@ -232,10 +256,6 @@ class KoboScraper extends BaseScraper {
 			if (count($matches) > 1 && isset($matches[$matcher["cgindex"]])) {
 				$data[$matcher["key"]] = $matches[$matcher["cgindex"]];
 			}
-		}
-
-		if (count($data) === 0) {
-			$this->writeRawToErrorFile();
 		}
 
 		return $data;

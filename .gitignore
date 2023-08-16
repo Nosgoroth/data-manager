@@ -42,3 +42,4 @@ config/*.json
 
 bookseries_scrape.html
 bookseries_scrape_error.html
+scraper_debug

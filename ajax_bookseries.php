@@ -67,7 +67,11 @@ if (isset($_REQUEST["action"])) {
 			}
 			
 			$scraper->read($debug);
-			$pubdate = $scraper->extractPubDate();
+			if (isset($_REQUEST["ddmmyy"])) {
+				$pubdate = $scraper->extractPubDateDDMMYY();
+			} else {
+				$pubdate = $scraper->extractPubDate();
+			}
 			header("Content-type: application/json");
 			echo json_encode(array(
 				"asin" => $_REQUEST["asin"],
