@@ -1275,7 +1275,10 @@
 				addErrorHandler();
 
 				if (options.renderNotes) {
-					var $notes = $ctr.appendR('<span class="notes">');
+
+					console.log(status, statusSource, this.hasReleaseDate(), this.getReleaseDateShort());
+
+					const $notes = $ctr.appendR('<span class="notes">');
 					switch(status) {
 						case this.__static.Enum.Status.StoreWait:
 						case this.__static.Enum.Status.Available:
@@ -1283,15 +1286,19 @@
 						case this.__static.Enum.Status.Phys:
 							$notes.text( this.getReleaseDateShort() );
 							break;
-						default:
-						case this.__static.Enum.Status.None:
-							$notes.text(notes);
-							break;
 						case this.__static.Enum.Status.Source:
 							if (this.hasReleaseDate()) {
 								$notes.text(this.getReleaseDateShort());
 							} else {
 								$notes.text("JP");
+							}
+							break;
+						case this.__static.Enum.Status.None:
+						default:
+							if (statusSource && this.hasReleaseDate()) {
+								$notes.text( this.getReleaseDateShort() );
+							} else {
+								$notes.text(notes);
 							}
 							break;
 					}
@@ -4418,7 +4425,15 @@
 											continue; // All other statuses don't go beyond here
 									}
 
-									if (willUpdate && _release?.isBefore(earliestPreorder)) {
+									const currentIsEarlier = !!(!earliestPreorder || _release?.isBefore(earliestPreorder));
+
+									if (debug) {
+										consoleLogItems.push(`willUpdate: ${ willUpdate ? "true" : "false" }`);
+										consoleLogItems.push(`currentIsSW: ${ currentIsSW ? "true" : "false" }`);
+										consoleLogItems.push(`currentIsEarlier: ${ currentIsEarlier ? "true" : "false" }`);
+									}
+
+									if (willUpdate && currentIsEarlier) {
 										earliestPreorder = _release;
 										earliestPreorderIsSource = true;
 										earliestPreorderIsSW = currentIsSW;
