@@ -3516,19 +3516,25 @@
 				}
 			},
 			resolveIssueWithReleaseDate: function(issue, releaseDate, volumeDO) {
+
+				const status = volumeDO.getStatus();
+				const sourceStatus = volumeDO.getStatusSource();
+				const isvolumeTypeSource = (
+					status === BookSeriesVolumeDO.Enum.Status.Source
+					|| ( sourceStatus && status === BookSeriesVolumeDO.Enum.Status.None )
+					|| ( sourceStatus && !status )
+				);
+
 				switch(issue) {
 					case BookSeriesIssue.MissingInformation:
 						if (!volumeDO) {
 							throw new Error("Unknown volume with issue");
 						}
-						switch (volumeDO.getStatus()) {
-							case BookSeriesVolumeDO.Enum.Status.Source:
-								volumeDO.setReleaseDateSource(releaseDate);
-								break;
-							default:
-								volumeDO.setReleaseDate(releaseDate);
-								volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
-								break;
+						if (isvolumeTypeSource) {
+							volumeDO.setReleaseDateSource(releaseDate);
+						} else {
+							volumeDO.setReleaseDate(releaseDate);
+							volumeDO.setStatus(BookSeriesVolumeDO.Enum.Status.StoreWait);
 						}
 						this.saveUpdatedVolume(volumeDO, true);
 						break;
@@ -4376,11 +4382,50 @@
 								}
 
 								break;
+
+
 							case BookSeriesVolumeDO.Enum.Status.None:
 							default:
 								if (debug) {
 									consoleLogItems.push("INVALID STATUS");
 								}
+								const sourceStatus = volumeDO.getStatusSource();
+								if (!sourceStatus) {
+									continue;
+								}
+								{		
+									let currentIsSW = false;
+									let _release = null;
+									let willUpdate = false;
+									switch(sourceStatus) {
+										case BookSeriesVolumeDO.Enum.StatusSource.StoreWait:
+											currentIsSW = true;
+										case BookSeriesVolumeDO.Enum.StatusSource.Preorder:
+										case BookSeriesVolumeDO.Enum.StatusSource.Backlog:
+											_release = volumeDO.getReleaseDateSourceMoment();
+											if (!_release || !_release.isValid()) { break; }
+											
+											willUpdate = true;
+
+											if (sourceStatus === BookSeriesVolumeDO.Enum.StatusSource.Preorder) {
+												preordered += 1;
+											}
+											break;
+										case BookSeriesVolumeDO.Enum.StatusSource.Available:
+										default: 
+											break;
+										case BookSeriesVolumeDO.Enum.StatusSource.Read:
+											continue; // All other statuses don't go beyond here
+									}
+
+									if (willUpdate && _release?.isBefore(earliestPreorder)) {
+										earliestPreorder = _release;
+										earliestPreorderIsSource = true;
+										earliestPreorderIsSW = currentIsSW;
+										earliestPreorderIsSourcePreorder = true;
+									}
+								}
+								
 								break;
 						}
 
