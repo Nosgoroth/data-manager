@@ -1276,8 +1276,6 @@
 
 				if (options.renderNotes) {
 
-					console.log(status, statusSource, this.hasReleaseDate(), this.getReleaseDateShort());
-
 					const $notes = $ctr.appendR('<span class="notes">');
 					switch(status) {
 						case this.__static.Enum.Status.StoreWait:
@@ -4396,11 +4394,11 @@
 								if (debug) {
 									consoleLogItems.push("INVALID STATUS");
 								}
-								const sourceStatus = volumeDO.getStatusSource();
-								if (!sourceStatus) {
-									continue;
-								}
 								{		
+									const sourceStatus = volumeDO.getStatusSource();
+									if (!sourceStatus) {
+										continue;
+									}
 									let currentIsSW = false;
 									let _release = null;
 									let willUpdate = false;
