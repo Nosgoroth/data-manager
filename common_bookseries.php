@@ -69,12 +69,28 @@ abstract class BaseScraper {
 
 abstract class BaseAmazonScraper extends BaseScraper {
 	abstract public function extractPubDate();
+
+	protected $extractKindleAsinMethods = [];
+	function extractKindleAsin() {
+		foreach ($this->extractKindleAsinMethods as $methodName) {
+			$retval = $this->$methodName();
+			if ($retval) {
+				return $retval;
+			}
+		}
+		return null;
+	}
 }
 
 
 class AmazonJpAsinScraper extends BaseAmazonScraper {
 
 	protected $debug_namespace = "amazonjp";
+
+	protected $extractKindleAsinMethods = [
+		"extractKindleAsin_v1",
+		"extractKindleAsin_v2",
+	];
 
 	function read($debug = false) {
 		//return;
@@ -91,8 +107,18 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		}
 	}
 
+	function extractKindleAsin_v1() {
+		$matches = null;
+		preg_match("/data-tmm-see-more-editions-click=\"(\{.*\})\"/", $this->raw, $matches);
+		if (!$matches || count($matches) < 2) { return null;  }
+		$editions = json_decode(html_entity_decode($matches[1]), true);
+		if (!isset($editions["metabindingUrl"])) { return null; }
+		preg_match("/dp\/(B[\d\w]*)\//", $editions["metabindingUrl"], $matches);
+		if (!$matches || count($matches) < 2) { return null; }
+		return $matches[1];
+	}
 
-	function extractKindleAsin() {
+	function extractKindleAsin_v2() {
 		$pos = strpos($this->raw, "tmm-grid-swatch-KINDLE");
 		if ($pos === false) { return null; }
 		$substr = substr($this->raw, $pos);
@@ -125,6 +151,11 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 
 	protected $debug_namespace = "amazoncom";
 
+	protected $extractKindleAsinMethods = [
+		"extractKindleAsin_v1",
+		"extractKindleAsin_v2",
+	];
+
 	function read($debug = false) {
 		$this->raw = file_get_contents("https://smile.amazon.com/dp/".$this->id, false, stream_context_create(array(
 			"http" => array(
@@ -149,7 +180,18 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 		}
 	}
 
-	function extractKindleAsin() {
+	function extractKindleAsin_v1() {
+		$matches = null;
+		preg_match("/data-tmm-see-more-editions-click=\"(\{.*\})\"/", $this->raw, $matches);
+		if (!$matches || count($matches) < 2) { return null;  }
+		$editions = json_decode(html_entity_decode($matches[1]), true);
+		if (!isset($editions["metabindingUrl"])) { return null; }
+		preg_match("/dp\/(B[\d\w]*)\//", $editions["metabindingUrl"], $matches);
+		if (!$matches || count($matches) < 2) { return null; }
+		return $matches[1];
+	}
+
+	function extractKindleAsin_v2() {
 		$pos = strpos($this->raw, "tmm-grid-swatch-KINDLE");
 		if ($pos === false) { return null; }
 		$substr = substr($this->raw, $pos);
