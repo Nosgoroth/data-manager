@@ -4282,6 +4282,7 @@
 						];
 						let willUpdate = false;
 
+						forvolume_switchstatus:
 						switch (status) {
 							case BookSeriesVolumeDO.Enum.Status.Read:
 								available += 1;
@@ -4420,7 +4421,7 @@
 										default: 
 											break;
 										case BookSeriesVolumeDO.Enum.StatusSource.Read:
-											continue; // All other statuses don't go beyond here
+											break forvolume_switchstatus; // All other statuses don't go beyond here
 									}
 
 									const currentIsEarlier = !!(!earliestPreorder || _release?.isBefore(earliestPreorder));
@@ -4471,14 +4472,23 @@
 					}
 
 					(debug && console.groupEnd());
+					if (debug) {
+						console.group("Volume counts");
+					}
 
 					let shouldUseSourceVolumeNumbers = false;
+
 					if (owned < ownedsource) {
 						shouldUseSourceVolumeNumbers = true;
 					} else if (owned === ownedsource) {
 						if (preordered < preorderedsource) {
 							shouldUseSourceVolumeNumbers = true;
 						}
+					}
+
+					if (debug) {
+						console.log("owned", owned, "ownedsource", ownedsource, "preordered", preordered, "preorderedsource", preorderedsource);
+						console.log("shouldUseSourceVolumeNumbers", shouldUseSourceVolumeNumbers);
 					}
 
 					if (shouldUseSourceVolumeNumbers) {
@@ -4491,8 +4501,6 @@
 					this.setOwned(owned); this.setRead(read); this.setPrecount(preordered);
 					
 					if (debug) {
-						console.group("Volume counts");
-						console.log("shouldUseSourceVolumeNumbers", shouldUseSourceVolumeNumbers);
 						console.log("owned", owned, "read", read, "preordered", preordered, "available", available);
 						console.groupEnd();
 					}
