@@ -8,7 +8,16 @@
 			series: "string",
 			type: ["enum", ["Nendoroid", "Figure", "Book", "Music", "Video", "Other"]],
 			status: ["enum", ["Announced", "PreorderOpen", "Preordered", "Paid", "Shipped", "Received", "Released", "OutOfPrint", "PreorderWait"]],
-			store: ["enum", ["AmiAmi", "CD Japan", "Other"]],
+			store: ["enum", [
+				"AmiAmi", 
+				"CD Japan",
+				"Other",
+				"Amazon",
+				"HS",
+				"Mandarake",
+				"YahooA",
+				"Proxy"
+			]],
 			release: "string",
 			notes: "string",
 			thumbUrl: "string",
