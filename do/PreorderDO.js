@@ -59,6 +59,16 @@
 				return null;
 			},
 
+			getBestLink: function() {
+				let link = this.getMfc();
+				if (link) { return link; }
+				link = this.getLink();
+				if (link) { return link; }
+				link = this.getThumbnailUrl();
+				if (link) { return link; }
+				return null;
+			},
+
 			renderDropdownMenuWithButton: function(){
 				var $ctr = jQuery('<div class="preorderDropdownMenuContainer">');
 				var $btngrp = $ctr.appendR('<div class="btn-group"><button class="btn btn-mini btn-link dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button></div>');
@@ -205,9 +215,17 @@
 				name: {
 					transform: function($container, name, value, options) {
 						if (!value) { return; }
-						var $val = $container.find(".value");
-						var $pic = $val.prependR('<span class="mfcThumbnail">');
-						var thumbUrl = this.getThumbnailUrl();
+						const link = this.getBestLink();
+						const $val = $container.find(".value");
+						let $pic;
+						if (link) {
+							$pic = $val.prependR('<a class="mfcThumbnail">');
+							$pic.attr("href", link);
+							$pic.attr("target", "_blank");
+						} else {
+							$pic = $val.prependR('<span class="mfcThumbnail">');
+						}
+						const thumbUrl = this.getThumbnailUrl();
 						if (thumbUrl) {
 							$pic.css("background-image", 'url("'+thumbUrl+'")');
 						}
