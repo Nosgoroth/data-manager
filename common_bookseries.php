@@ -1,5 +1,7 @@
 <?php
 
+require_once "class.confighandler.php";
+
 
 if (!function_exists("gzdecode")) {
 	function gzdecode($data) { 
@@ -34,9 +36,11 @@ abstract class BaseScraper {
 	protected $debug_namespace = "";
 	protected $debug_directory = "scraper_debug";
 	protected $debug_output_ttl = 60*30; //seconds
+	protected $configHandler = null;
 
 	function __construct($id) {
 		$this->id = $id;
+		$this->configHandler = new ConfigHandler("BookSeriesDO");
 	}
 
 	abstract public function read($debug = false);
@@ -94,7 +98,8 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 
 	function read($debug = false) {
 		//return;
-		$this->raw = file_get_contents("https://www.amazon.co.jp/gp/product/".$this->id.'?language=ja_JP');
+		$domain = $this->configHandler->get("amazon_jp_domain_scraper", "www.amazon.co.jp");
+		$this->raw = file_get_contents("https://${domain}/gp/product/".$this->id.'?language=ja_JP');
 		if (isGzipHeaderSet(transformIntoHeaderMap($http_response_header))) {
 			$this->raw = gzdecode($this->raw);
 		}
@@ -157,12 +162,13 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 	];
 
 	function read($debug = false) {
-		$this->raw = file_get_contents("https://smile.amazon.com/dp/".$this->id, false, stream_context_create(array(
+		$domain = $this->configHandler->get("amazon_en_domain_scraper", "www.amazon.com");
+		$this->raw = file_get_contents("https://${domain}/dp/".$this->id, false, stream_context_create(array(
 			"http" => array(
 				"method" => "GET",
 		        "header" => implode("\r\n", array(
 		        	"user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
-					"referer: https://www.amazon.com/",
+					"referer: https://${domain}/",
 					"Accept-Language: es,en-GB;q=0.9,en;q=0.8,ca;q=0.7,ja;q=0.6",
 					"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
 		        	"Accept-Encoding: none",
@@ -244,7 +250,8 @@ class KoboScraper extends BaseScraper {
 	protected $debug_namespace = "kobo";
 
 	function read($debug = false) {
-		$this->raw = file_get_contents("https://www.kobo.com/es/en/ebook/".$this->id, false, stream_context_create(array(
+		$domain = $this->configHandler->get("kobo_domain_scraper", "https://www.kobo.com/es/en");
+		$this->raw = file_get_contents("${domain}/ebook/".$this->id, false, stream_context_create(array(
 			"http" => array(
 				"timeout" => 10,
 				"method" => "GET",

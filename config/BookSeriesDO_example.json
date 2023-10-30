@@ -51,4 +51,8 @@
 	"amazon_en_domain": "www.amazon.com",
 	"amazon_jp_domain": "www.amazon.co.jp",
 	"kobo_domain": "https://www.kobo.com/es/en",
+
+	"amazon_en_domain_scraper": "www.amazon.com",
+	"amazon_jp_domain_scraper": "www.amazon.co.jp",
+	"kobo_domain_scraper": "https://www.kobo.com/es/en",
 }
