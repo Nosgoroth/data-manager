@@ -794,17 +794,17 @@
 			getAmazonLink: function(){
 				const asin = this.getAsin();
 				if (!asin) { return null; }
-				return "https://smile.amazon.com/dp/"+asin
+				return BookSeriesDO.getAmazonEnDomain() + "dp/"+asin
 			},
 			getAmazonJpLink: function(){
 				const sourceAsin = this.getSourceAsin();
 				if (!sourceAsin) { return null; }
-				return "https://www.amazon.co.jp/dp/"+sourceAsin;
+				return BookSeriesDO.getAmazonJpDomain() + "dp/"+sourceAsin;
 			},
 			getKoboLink: function(){
 				const koboId = this.getKoboId();
 				if (!koboId) { return null; }
-				return "https://www.kobo.com/es/en/ebook/"+koboId;
+				return BookSeriesDO.getKoboDomain() + "ebook/"+koboId;
 			},
 			getBookwalkerJpLink: function(){
 				const bwjpid = this.getBookwalkerJpId();
@@ -2660,10 +2660,10 @@
 				if (!kss) { return null; }
 				if (asPhysicalBook) {
 					//return "https://smile.amazon.com/s?i=stripbooks-intl-ship&s=date-desc-rank&field-keywords=" + encodeURIComponent(kss);
-					return "https://smile.amazon.com/s?k="+encodeURIComponent(kss)+"&i=stripbooks";
+					return BookSeriesDO.getAmazonEnDomain() + "s?k="+encodeURIComponent(kss)+"&i=stripbooks";
 				} else {
 					// return "https://smile.amazon.com/gp/search/?search-alias=digital-text&unfiltered=1&field-language=English&sort=daterank&field-keywords="+encodeURIComponent(kss);
-					return "https://smile.amazon.com/s?k="+encodeURIComponent(kss)+"&i=digital-text";
+					return BookSeriesDO.getAmazonEnDomain() + "s?k="+encodeURIComponent(kss)+"&i=digital-text";
 				}
 			},
 			getKindleSearchLinkSource: function(volumeNumber, asPhysicalBook){
@@ -2678,12 +2678,12 @@
 			getGoogleKindleSearchLink: function(volumeNumber){
 				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
-				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.com`;
+				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.com`; // TODO: Use domain from config
 			},
 			getGoogleKindleSearchLinkSource: function(volumeNumber){
 				var kss = this.getSearchTerm(volumeNumber, true);
 				if (!kss) { return null; }
-				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.co.jp`;
+				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.co.jp`; // TODO: Use domain from config
 			},
 			getYenPressSearchLink: function(volumeNumber){
 				var kss = this.getSearchTerm(volumeNumber);
@@ -3146,7 +3146,7 @@
 				}
 
 				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Source) {
-					return [BookSeriesIssue.WaitingForLocal];
+					return [BookSeriesIssue.WaitingForLocal, firstUnowned];
 				}
 				
 
@@ -4576,6 +4576,32 @@
 			getConfigValue: function(key, defaultValue) {
 				const x = window._do_configs?.bookseriesdo?.[key];
 				return ((typeof x === "undefined") ? defaultValue : x);
+			},
+			getAmazonEnDomain: function() {
+				return this.makeDomainIntoUrlPath(
+					this.getConfigValue("amazon_en_domain", "www.amazon.com")
+				);
+			},
+			getAmazonJpDomain: function() {
+				return this.makeDomainIntoUrlPath(
+					this.getConfigValue("amazon_jp_domain", "www.amazon.co.jp")
+				);
+			},
+			getKoboDomain: function() {
+				return this.makeDomainIntoUrlPath(
+					this.getConfigValue("kobo_domain", "kobo.com")
+				);
+			},
+
+			makeDomainIntoUrlPath: function(domain){
+				let x = domain;
+				if (!x.startsWith("http")) {
+					x = "https://" + x;
+				}
+				if (!x.endsWith("/")) {
+					x = x+"/";
+				}
+				return x;
 			},
 
 

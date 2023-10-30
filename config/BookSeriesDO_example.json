@@ -47,4 +47,8 @@
 	"readinglist_ignore_sourcestatus": false,
 
 	"readinglist_display_score": false,
+
+	"amazon_en_domain": "www.amazon.com",
+	"amazon_jp_domain": "www.amazon.co.jp",
+	"kobo_domain": "https://www.kobo.com/es/en",
 }
