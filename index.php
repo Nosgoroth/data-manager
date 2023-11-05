@@ -21,6 +21,15 @@ require_once("common.php");
 	$fmt = $fmt ? $fmt : 0;
 	?>
 	<link rel="stylesheet/less" type="text/css" href="style.less?t=<?= $fmt ?>" />
+
+	<?php
+	if (file_exists("style_custom.less")) {
+		$fmt = @filemtime('style_custom.less');
+		$fmt = $fmt ? $fmt : 0;
+		?><link rel="stylesheet/less" type="text/css" href="style_custom.less?t=<?= $fmt ?>" /><?php
+	}
+	?>
+	
 	<?php
 		foreach(glob("styles/*DO.less") as $DOstyle) {
 			$fmt = @filemtime($DOstyle);
@@ -74,7 +83,7 @@ require_once("common.php");
 		ScriptTag::generate("res/doop/DataObjectCollectionEditor.js");
 		
 		ScriptTag::generate("cdoe.js");
-		
+
 		foreach(glob("do/*DO.js") as $DOfile) {
 			ScriptTag::generate($DOfile);
 		}
@@ -120,6 +129,11 @@ require_once("common.php");
 	<script type="text/javascript">
 		window._customAjaxAvailable = <?= json_encode(glob("customajax_*.php")) ?>;
 	</script>
+
+	
+	<?php
+		ScriptTag::generate("main.js");
+	?>
 	
 
 </div>

@@ -1,0 +1,12 @@
+{
+	// Copy as 'config/_global.json' and edit.
+	// Yes, line comments and trailing commas are allowed here.
+
+	"dark_mode": "follow-system", // Valid values: follow-system, light, dark
+	
+	//Checks for match using regex in window.navigator.userAgent (so double-escape regex characters like parentheses)
+	"force_light_mode_for_user_agent": [
+		"Mozilla/5.0 \\(Macintosh; Intel Mac OS X [\\d\\w_]+\\) AppleWebKit/"
+	],
+	"force_dark_mode_for_user_agent": [],
+}
