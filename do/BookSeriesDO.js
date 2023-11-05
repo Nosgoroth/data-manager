@@ -75,9 +75,10 @@
 
 		Shortcut for filling the volumes of a series: Paste into the volumes field of the series (which would normally contain raw json) a list of volumes, one per line, in the following format:
 
-		colorder;asin;status;sourceasin;otherasin;orderlabel;koboId
+		colorder;asin;status;sourceasin;otherasin;orderlabel;koboId;sourceStatus
 
-		As a reminder, volume status => Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
+		As a reminder
+			[Status] Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
 		(ASIN will be interpreted as source asin if status=6)
 
 		Example:
@@ -88,6 +89,10 @@
 		4;B08KYGV773;6;;;IV
 
 		This is parsed in the constructor for BookSeriesVolumeDO
+
+		WARNING: The enum values for sourceStatus are different! Yes, I know that's not great.
+
+			[SourceStatus] Read = 1, Backlog = 2, Preorder = 3, Available = 4, StoreWait = 5
 
 	*/
 
@@ -593,13 +598,13 @@
 				//Read = 1, Backlog = 2, Source = 6 (ASIN will be interpreted as source asin)
 				*/
 
-				//colorder;asin;status;sourceasin;otherasin;orderlabel
+				//colorder;asin;status;sourceasin;otherasin;orderlabel;koboid;statussource
 
 				if (Array.isArray(rawdata)) {
 					this._rawdata = {};
 					this._rawdata.colorder = rawdata[0] ? rawdata[0].trim() : window.undefined;
 					this._rawdata.asin = rawdata[1] ? rawdata[1].trim() : window.undefined;
-					this._rawdata.status = this.statusFromString(rawdata[2]);
+					this._rawdata.status = this.statusFromString(rawdata[2].trim());
 					if (this._rawdata.status === this.__static.Enum.Status.Source) {
 						this._rawdata.sourceAsin = this._rawdata.asin;
 						this._rawdata.asin = window.undefined;
@@ -617,6 +622,7 @@
 					}
 					this._rawdata.orderLabel = rawdata[5] ? rawdata[5].trim() : window.undefined;
 					this._rawdata.koboId = rawdata[6] ? rawdata[6].trim() : window.undefined;
+					this._rawdata.statusSource = rawdata[7] ? this.statusSourceFromString(rawdata[7].trim()) : window.undefined;
 				}
 
 				this.options = populateDefaultOptions(options, {
@@ -1129,6 +1135,12 @@
 					case "available": case "avail": case "av": return 7;
 					default: return BookSeriesDO.getConfigValue("defaultStatus", null);
 				}
+			},
+			statusSourceFromString: function(str){
+				if (!isNaN(parseInt(str))) {
+					return parseInt(str);
+				}
+				return BookSeriesDO.getConfigValue("defaultStatusSource", null);
 			},
 			getBestReleaseDate: function(){
 				return this.getReleaseDate() || this.getReleaseDateSource();

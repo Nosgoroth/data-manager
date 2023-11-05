@@ -3,6 +3,7 @@
 	// Yes, line comments and trailing commas are allowed here.
 
 	"defaultStatus": null,
+	"defaultStatusSource": null,
 
 	// Custom search providers:
 
