@@ -81,6 +81,9 @@ require_once("common.php");
 		ScriptTag::generate("res/doop/ReadyObject.js");
 		ScriptTag::generate("res/doop/JsonAjaxInterface.js");
 		ScriptTag::generate("res/doop/DataObjectCollectionEditor.js");
+
+		ScriptTag::generate("res/ConfigHandler.js");
+		ScriptTag::generate("res/DarkModeController.js");
 		
 		ScriptTag::generate("cdoe.js");
 

@@ -149,6 +149,55 @@ window.customMultiDataObjectEditor = Object.extends({
 				.appendTo(this.$editorContainer)
 				;
 		}
+
+		const $configContainer = this.$editorContainer.appendR('<div id="config">');
+		$configContainer.appendR("<h3>").text("Configuration");
+
+		this.renderConfigControlSelect({
+			$parent: $configContainer,
+			key: "dark_mode",
+			label: "Dark mode",
+			valuesLabels: {
+				"follow-system": "Follow system",
+				"light": "Light",
+				"dark": "Dark"
+			},
+			currentValue: _globalConfig.get("dark_mode", "follow-system"),
+			onChange: () => {
+				setDarkModeClasses(DarkModeController.isDarkMode());
+			},
+		});
+	},
+
+	renderConfigControlSelect: function(options){
+		options = Object.assign({}, {
+			$parent: null,
+			key: null,
+			label: null,
+			valuesLabels: {},
+			currentValue: null,
+			onChange: null,
+		}, options);
+		const validValues = Object.keys(options.valuesLabels);
+		const key = options.key;
+		// $parent, key, validValues, currentValue, onChange
+		const $container = options.$parent.appendR('<div class="config-item-container">');
+		$container.appendR('<label>').attr("for", "config-item-"+key).text(options.label);
+		const $select = $container.appendR('<select>').attr("id", "config-item-"+key);
+		for (var i = 0; i < validValues.length; i++) {
+			const val = validValues[i];
+			const $option = $select.appendR('<option>').attr("value", val).text(options.valuesLabels[val]);
+			if (val === options.currentValue) {
+				$option.attr("selected", "selected");
+			}
+		}
+		$select.on('change', () => {
+			const val = $select.val();
+			_globalConfig.set(key, val);
+			if (options.onChange) {
+				options.onChange(val, key);
+			}
+		});
 	},
 
 	renderTypeEditor: function(typename){
