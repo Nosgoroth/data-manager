@@ -94,6 +94,10 @@ if (file_exists('../../login.php')) {
 <script type='text/javascript' src='../../res/doop/ReadyObject.js'></script>
 <script type='text/javascript' src='../../res/doop/JsonAjaxInterface.js'></script>
 
+<script type='text/javascript' src='../../res/ConfigHandler.js'></script>
+<script type='text/javascript' src='../../res/DarkModeController.js'></script>
+<script type='text/javascript' src='../../main.js'></script>
+
 <!-- App source -->
 <?php
 $fmt = @filemtime("../../do/BookSeriesDO.js");
