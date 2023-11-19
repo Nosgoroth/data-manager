@@ -24,10 +24,17 @@ if (file_exists('../../login.php')) {
 	$fmt = $fmt ? $fmt : 0;
 	?>
 	<link rel="stylesheet/less" type="text/css" href="style.less?t=<?= $fmt ?>" />
+	<?php
+	if (file_exists("../../style_custom.less")) {
+		$fmt = @filemtime('../../style_custom.less');
+		$fmt = $fmt ? $fmt : 0;
+		?><link rel="stylesheet/less" type="text/css" href="../../style_custom.less?t=<?= $fmt ?>" /><?php
+	}
+	?>
 	
 	<meta name="robots" content="noindex" />
 </head>
-<body class="">
+<body class="bookstats">
 <div class="container">
 
 	<h2>Book stats</h2>
