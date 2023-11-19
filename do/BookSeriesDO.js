@@ -604,7 +604,7 @@
 					this._rawdata = {};
 					this._rawdata.colorder = rawdata[0] ? rawdata[0].trim() : window.undefined;
 					this._rawdata.asin = rawdata[1] ? rawdata[1].trim() : window.undefined;
-					this._rawdata.status = this.statusFromString(rawdata[2].trim());
+					this._rawdata.status = rawdata[2] ? this.statusFromString(rawdata[2].trim()) : window.undefined;
 					if (this._rawdata.status === this.__static.Enum.Status.Source) {
 						this._rawdata.sourceAsin = this._rawdata.asin;
 						this._rawdata.asin = window.undefined;
