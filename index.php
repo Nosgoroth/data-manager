@@ -6,6 +6,9 @@ if (file_exists('login.php')) {
 }
 require_once("common.php");
 
+require_once "class.confighandler.php";
+$configHandler = new ConfigHandler("_global");
+
 
 ?><!DOCTYPE html><html><head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -35,6 +38,12 @@ require_once("common.php");
 			$fmt = @filemtime($DOstyle);
 			$fmt = $fmt ? $fmt : 0;
 			?><link rel="stylesheet/less" type="text/css" href="<?= $DOstyle ?>?t=<?= $fmt ?>" /><?php
+		}
+	?>
+
+	<?php
+		foreach ($configHandler->get("additional_css",[]) as $value) {
+			?><link rel="stylesheet" type="text/css" href="<?= $value ?>" /><?php
 		}
 	?>
 
@@ -70,6 +79,10 @@ require_once("common.php");
 	<!-- App source -->
 	
 	<?php
+
+		foreach ($configHandler->get("additional_js",[]) as $value) {
+			ScriptTag::generate($value);
+		}
 
 		ScriptTag::generate("res/doop/oop.js");
 		ScriptTag::generate("res/doop/do.js");
