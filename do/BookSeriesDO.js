@@ -1208,21 +1208,43 @@
 			getReadDateMoment: function() { return this.getAsMomentDDMMYYYY("readDate"); },
 			getPurchasedDateMoment: function() { return this.getAsMomentDDMMYYYY("purchasedDate"); },
 			getPreorderDateMoment: function() { return this.getAsMomentDDMMYYYY("preorderDate"); },
+			getReadOrPurchaseDateMoment: function() {
+				const a = this.getReadDateMoment();
+				if (a) { return a; }
+				const b = this.getPurchasedDateMoment();
+				if (b) { return b; }
+				const c = this.getReleaseDateMoment();
+				if (c) { return c; }
+				return null;
+			},
 			getPreorderOrPurchaseDateMoment: function() {
 				const preorderMoment = this.getPreorderDateMoment();
 				if (preorderMoment) { return preorderMoment; }
 				const purchaseMoment = this.getPurchasedDateMoment();
 				if (purchaseMoment) { return purchaseMoment; }
+				const c = this.getReleaseDateMoment();
+				if (c) { return c; }
 				return null;
 			},
 			getReadDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("readDateSource"); },
 			getPurchasedDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("purchasedDateSource"); },
 			getPreorderDateSourceMoment: function() { return this.getAsMomentDDMMYYYY("preorderDateSource"); },
+			getReadOrPurchaseDateSourceMoment: function() {
+				const a = this.getReadDateSourceMoment();
+				if (a) { return a; }
+				const b = this.getPurchasedDateSourceMoment();
+				if (b) { return b; }
+				const c = this.getReleaseDateSourceMoment();
+				if (c) { return c; }
+				return null;
+			},
 			getPreorderOrPurchaseDateSourceMoment: function() {
 				const preorderMoment = this.getPreorderDateSourceMoment();
 				if (preorderMoment) { return preorderMoment; }
 				const purchaseMoment = this.getPurchasedDateSourceMoment();
 				if (purchaseMoment) { return purchaseMoment; }
+				const c = this.getReleaseDateSourceMoment();
+				if (c) { return c; }
 				return null;
 			},
 
@@ -5098,22 +5120,44 @@
 							|| (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Backlog)
 					});
 					const readVolumesCOL = seriesVolumesCOL.filter(x => {
-						return (!ignore.regular && x.getStatus() === BSVEnumStatus.Read)
-							|| (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Read)
+						const regularStatusIsRead = (!ignore.regular && x.getStatus() === BSVEnumStatus.Read);
+						const sourceStatusIsRead  = (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Read);
+						const isRead = regularStatusIsRead || sourceStatusIsRead;
+						let readDates = [];
+						if (regularStatusIsRead) {
+							readDates.push(x.getReadOrPurchaseDateMoment());
+						}
+						if (sourceStatusIsRead) {
+							readDates.push(x.getReadOrPurchaseDateSourceMoment());
+						}
+						readDates = readDates.filter(x => x);
+						if (readDates.length > 1) {
+							readDates.sort((m1, m2) => { return m1.unix() > m2.unix(); });
+						}
+						if (readDates.length > 0) {
+							x._dateReadMoment = readDates[readDates.length - 1];
+							x._dateReadUnix = x._dateReadMoment.unix();
+						}
+
+						// if (sourceStatusIsRead) { console.log("SOURCE READ", x.getFullName(), x._dateReadMoment.format()); }
+
+						return isRead;
 					});
+					readVolumesCOL.sort((x, y) => { return x._dateReadUnix > y._dateReadUnix; });
 
 					if (unreadVolumesCOL.length === 0) { return; }
 
 					const unreadOrAvailVolumesCOL = seriesVolumesCOL.filter(x => {
-						return (!ignore.regular && [
-								BSVEnumStatus.Backlog,
-								BSVEnumStatus.Available,
-							].includes(x.getStatus()))
-							|| (!ignore.source && [
-								BSVEnumStatusSource.Backlog,
-								BSVEnumStatusSource.Available,
-							].includes(x.getStatusSource()))
-							;
+						const regularHasAny = ignore.regular && [
+							BSVEnumStatus.Backlog,
+							BSVEnumStatus.Available,
+						].includes(x.getStatus());
+						const sourceHasAny = ignore.source && [
+							BSVEnumStatusSource.Backlog,
+							BSVEnumStatusSource.Available,
+						].includes(x.getStatusSource());
+
+						return (regularHasAny && sourceHasAny);
 					});
 					const preorderVolumesCOL = seriesVolumesCOL.filter(x => {
 						return (!ignore.regular && [
@@ -5130,8 +5174,6 @@
 					const latestOwned = unreadVolumesCOL[unreadVolumesCOL.length - 1];
 					const latestVolumeSource = seriesVolumesCOL[seriesVolumesCOL.length - 1];
 
-
-
 					const c = {
 						unread: unreadVolumesCOL.length,
 						plusUnread: unreadVolumesCOL.length - 1,
@@ -5140,7 +5182,7 @@
 						preorder: preorderVolumesCOL.length,
 						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
 						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
-						timeSinceLastRead: latestRead ? moment().diff(latestRead.getBestReleaseDateMoment(), 'months', true) : null,
+						timeSinceLastRead: latestRead ? moment().diff(latestRead._dateReadMoment, 'months', true) : null,
 						timeSinceLatest: moment().diff(latestOwned.getBestReleaseDateMoment(), 'months', true),
 						caughtUp: (latestVolumeSource.getColorder() === latestOwned.getColorder() && !ignore.regular),
 						finished: bookSeriesDO.isFinishedPublication()
