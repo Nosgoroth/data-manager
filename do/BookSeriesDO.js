@@ -1621,11 +1621,13 @@
 							alert(
 								"Score breakdown for "+seriesName+":\n\n"
 								+this._scoreBreakdown.map(x => {
-									return Math.round(10*x.value)/10 + " "
+									if (!x.valid) { return null; }
+									const val = Math.round(10*x.value)/10;
+									return (val > 0 ? "+" : "") + val + " "
 										+ (x.calculation ? " = "+x.calculation+" " : "")
 										+ (x.description ? "("+x.description+")" : "")
 										;
-								}).join("\n")
+								}).filter(x => !!x).join("\n")
 							);
 						})
 						;
@@ -5060,15 +5062,18 @@
 				const $container = jQuery('<div class="bookSeriesTiles">');
 
 				const weights = {
-					highlight: 		BookSeriesDO.getConfigValue("readinglist_score_highlight", 3),
-					firstVolume: 	BookSeriesDO.getConfigValue("readinglist_score_firstvolume", 1),
-					preorder: 		BookSeriesDO.getConfigValue("readinglist_weight_preorder", 2),
-					extraUnread: 	BookSeriesDO.getConfigValue("readinglist_weight_extraunread", 0.5),
-					available: 		BookSeriesDO.getConfigValue("readinglist_weight_available", -1),
-					monthsSince: 	BookSeriesDO.getConfigValue("readinglist_weight_monthssince", -1),
-					recentMonths: 	BookSeriesDO.getConfigValue("readinglist_recent_months", 0.25),
-					latestRecent: 	BookSeriesDO.getConfigValue("readinglist_score_latestrecent", 2),
-					caughtUp: 		BookSeriesDO.getConfigValue("readinglist_score_caughtup", 2),
+					base: 				BookSeriesDO.getConfigValue("readinglist_basescore", 100),
+					highlight: 			BookSeriesDO.getConfigValue("readinglist_score_highlight", 3),
+					firstVolume: 		BookSeriesDO.getConfigValue("readinglist_score_firstvolume", 1),
+					preorder: 			BookSeriesDO.getConfigValue("readinglist_weight_preorder", 2),
+					extraUnread: 		BookSeriesDO.getConfigValue("readinglist_weight_extraunread", 0.5),
+					available: 			BookSeriesDO.getConfigValue("readinglist_weight_available", -1),
+					monthsSince: 		BookSeriesDO.getConfigValue("readinglist_weight_monthssince", -1),
+					recentlyRead: 		BookSeriesDO.getConfigValue("readinglist_score_recentlyread", 2),
+					recentlyReadMax: 	BookSeriesDO.getConfigValue("readinglist_score_recentlyread_max", 2),
+					recentMonths: 		BookSeriesDO.getConfigValue("readinglist_recent_months", 0.25),
+					latestRecent: 		BookSeriesDO.getConfigValue("readinglist_score_latestrecent", 2),
+					caughtUp: 			BookSeriesDO.getConfigValue("readinglist_score_caughtup", 2),
 					caughtUpFinished: 	BookSeriesDO.getConfigValue("readinglist_score_caughtup_finished", 3),
 				};
 
@@ -5091,6 +5096,10 @@
 					const unreadVolumesCOL = seriesVolumesCOL.filter(x => {
 						return (!ignore.regular && x.getStatus() === BSVEnumStatus.Backlog)
 							|| (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Backlog)
+					});
+					const readVolumesCOL = seriesVolumesCOL.filter(x => {
+						return (!ignore.regular && x.getStatus() === BSVEnumStatus.Read)
+							|| (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Read)
 					});
 
 					if (unreadVolumesCOL.length === 0) { return; }
@@ -5117,6 +5126,7 @@
 					});
 
 					const volumeDO = unreadVolumesCOL[0];
+					const latestRead = readVolumesCOL.length > 0 ? readVolumesCOL[readVolumesCOL.length - 1] : null;
 					const latestOwned = unreadVolumesCOL[unreadVolumesCOL.length - 1];
 					const latestVolumeSource = seriesVolumesCOL[seriesVolumesCOL.length - 1];
 
@@ -5130,6 +5140,7 @@
 						preorder: preorderVolumesCOL.length,
 						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
 						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
+						timeSinceLastRead: latestRead ? moment().diff(latestRead.getBestReleaseDateMoment(), 'months', true) : null,
 						timeSinceLatest: moment().diff(latestOwned.getBestReleaseDateMoment(), 'months', true),
 						caughtUp: (latestVolumeSource.getColorder() === latestOwned.getColorder() && !ignore.regular),
 						finished: bookSeriesDO.isFinishedPublication()
@@ -5160,52 +5171,69 @@
 
 					const scoreBreakdown = [
 						{
+							valid: true,
 							description: "Active preorders means you should get up to date",
 							calculation: c.preorder+" preorders * weight of "+weights.preorder,
 							value: (weights.preorder * c.preorder),
 						},
 						{
+							valid: true,
 							description: "Smaller bonus for accumulated series",
 							calculation: c.plusUnread+" unread after first * weight of "+weights.extraUnread,
 							value: (weights.extraUnread * c.plusUnread),
 						},
 						{
+							valid: true,
 							description: "Negative bonus if you haven't been buying the latest releases",
 							calculation: c.avail+" available * weight of "+weights.available,
 							value: (weights.available * c.avail),
 						},
 						{
+							valid: true,
 							description: "The longer you've let it sit, the less likely you are to come back",
 							calculation: (Math.round(100*c.timeSince)/100)+" months * weight of "+weights.monthsSince,
 							value: (weights.monthsSince * c.timeSince),
 						},
 						{
+							valid: true,
+							description: "If you just read the last one, the likelier you are to come back",
+							calculation: (c.timeSinceLastRead && weights.recentlyReadMax && c.timeSinceLastRead < weights.recentlyReadMax) ?
+								"("+weights.recentlyReadMax+" max months - "+(Math.round(100*c.timeSinceLastRead)/100)+" months)% * weight of "+weights.recentlyRead
+								: "Not applied since last volume read more than "+weights.recentlyReadMax+" months ago or no such volume",
+							value: (c.timeSinceLastRead && weights.recentlyReadMax && c.timeSinceLastRead < weights.recentlyReadMax) ? (weights.recentlyRead * (weights.recentlyReadMax - c.timeSinceLastRead)/weights.recentlyReadMax) : 0,
+						},
+						{
+							valid: true,
 							description: "Bonus for latest volume released in last week",
 							calculation: null,
 							value: (c.timeSinceLatest < weights.recentMonths ? weights.latestRecent : 0),
 						},
 						{
+							valid: true,
 							description: "Bonus if series is a highlight",
 							calculation: null,
 							value: (bookSeriesDO.isHighlight() ? weights.highlight : 0),
 						},
 						{
+							valid: true,
 							description: "Bonus for unread first volumes",
 							calculation: null,
 							value: (volumeDO.getColorder() === 1 ? weights.firstVolume : 0),
 						},
 						{
+							valid: true,
 							description: "Bonus if caught up to source",
 							value: (c.caughtUp ? weights.caughtUp : 0),
 						},
 						{
+							valid: true,
 							description: "Bonus if caught up and finished publication",
 							value: (c.caughtUp && c.finished ? weights.caughtUpFinished : 0),
 						},
 					];
 					const score = scoreBreakdown.reduce(
-						(acc, x) => acc + x.value,
-						0 //initial value
+						(acc, x) => (x.valid && x.value) ? acc + x.value : acc,
+						weights.base //initial value
 					);
 
 					volumeDO._tileNote = note;
@@ -5215,7 +5243,7 @@
 					volumeDO._score = score;
 					volumesCOL.push(volumeDO);
 
-					// console.log(bookSeriesDO.getName(), score, c);
+					//console.log(bookSeriesDO.getName(), score, scoreBreakdown);
 
 				});
 				volumesCOL = BookSeriesVolumeDO.COL(volumesCOL);

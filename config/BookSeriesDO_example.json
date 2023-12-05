@@ -33,12 +33,15 @@
 
 	// Options for calculating reading list scores:
 
+	"readinglist_basescore": 100,
 	"readinglist_score_highlight": 3, // Added to score when series is marked as highlight
 	"readinglist_score_firstvolume": 1, // Added to score when first volume unread is first in series
 	"readinglist_weight_preorder": 2, // Added to score multiplied by number of preordered books in series
 	"readinglist_weight_extraunread": 0.5, // Added to score multiplied by number of unread books in series minus one
 	"readinglist_weight_available": -1, // Added to score multiplied by number of available (not bought) books in series
 	"readinglist_weight_monthssince": -1, // Added to score multiplied by number of months since release of first unread book in series
+	"readinglist_score_recentlyread": 2, // Bonus added to score if last volume was read recently
+	"readinglist_score_recentlyread_max": 2, // Number of months after which recently read bonus not applied.
 	"readinglist_recent_months": 0.25, // How long is considered "recent" (in months)
 	"readinglist_score_latestrecent": 2, // If latest unread book bought is recent, added to score multiplied by number of months since release of latest unread book in series
 	"readinglist_score_caughtup": 2,
