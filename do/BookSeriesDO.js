@@ -5115,10 +5115,12 @@
 					}
 
 					const seriesVolumesCOL = bookSeriesDO.getVolumes();
+
 					const unreadVolumesCOL = seriesVolumesCOL.filter(x => {
 						return (!ignore.regular && x.getStatus() === BSVEnumStatus.Backlog)
 							|| (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Backlog)
 					});
+
 					const readVolumesCOL = seriesVolumesCOL.filter(x => {
 						const regularStatusIsRead = (!ignore.regular && x.getStatus() === BSVEnumStatus.Read);
 						const sourceStatusIsRead  = (!ignore.source && x.getStatusSource() === BSVEnumStatusSource.Read);
@@ -5143,21 +5145,24 @@
 
 						return isRead;
 					});
+
 					readVolumesCOL.sort((x, y) => { return x._dateReadUnix > y._dateReadUnix; });
 
 					if (unreadVolumesCOL.length === 0) { return; }
 
 					const unreadOrAvailVolumesCOL = seriesVolumesCOL.filter(x => {
-						const regularHasAny = ignore.regular && [
+						
+						const regularHasAny = !ignore.regular && [
 							BSVEnumStatus.Backlog,
 							BSVEnumStatus.Available,
 						].includes(x.getStatus());
-						const sourceHasAny = ignore.source && [
+
+						const sourceHasAny = !ignore.source && [
 							BSVEnumStatusSource.Backlog,
 							BSVEnumStatusSource.Available,
 						].includes(x.getStatusSource());
 
-						return (regularHasAny && sourceHasAny);
+						return (regularHasAny || sourceHasAny);
 					});
 					const preorderVolumesCOL = seriesVolumesCOL.filter(x => {
 						return (!ignore.regular && [
@@ -5178,7 +5183,8 @@
 						unread: unreadVolumesCOL.length,
 						plusUnread: unreadVolumesCOL.length - 1,
 						unreadOrAvail: unreadOrAvailVolumesCOL.length,
-						avail: unreadOrAvailVolumesCOL.length - unreadVolumesCOL.length,
+						// TODO: Fix later. unreadOrAvailVolumesCOL is turbofucked
+						avail: 0,//unreadOrAvailVolumesCOL.length - unreadVolumesCOL.length, 
 						preorder: preorderVolumesCOL.length,
 						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
 						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
