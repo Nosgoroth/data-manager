@@ -1,3 +1,5 @@
+/* customMultiDataObjectEditor._editor */
+
 window.customMultiDataObjectEditor = Object.extends({
 
 	_types: [],

@@ -20,11 +20,16 @@ window.JsonAjaxInterface = Object.extends({
 		this.jsonAjaxLoad(this.JsonAjaxInterface_afterDataReady.bind(this));
 		this.JsonAjaxInterface_afterDomReady();
 
-		if (this._jsonAjaxAutostartCheckingRemoteModificationWithInterval) {
-			this.jsonAjaxStartCheckingRemoteModification(
-				this._jsonAjaxAutostartCheckingRemoteModificationWithInterval
-			);
+		let modificationCheckInterval = this._jsonAjaxAutostartCheckingRemoteModificationWithInterval;
+		if (window._globalConfig) {
+			modificationCheckInterval = window._globalConfig.get("intervalForDataUpdatedRemotelyCheckMs", modificationCheckInterval);
 		}
+
+		if (modificationCheckInterval && modificationCheckInterval > 0) {
+			this.jsonAjaxStartCheckingRemoteModification(modificationCheckInterval);
+		}
+
+		this.jsonAjaxAddBlockerHtmlToPage();
 	},
 
 	jsonAjaxLoad: function(success, error){
@@ -112,7 +117,26 @@ window.JsonAjaxInterface = Object.extends({
 			success: function(data){
 				if (data && data.lastmodified) {
 					if (data.lastmodified > this._lastModified) {
-						this.JsonAjaxInterface_onDataUpdatedRemotely();
+
+
+						let reloadAutomaticallyOnDataUpdatedRemotely = false;
+						let showBlockerOnDataUpdatedRemotely = true;
+						if (window._globalConfig) {
+							reloadAutomaticallyOnDataUpdatedRemotely = window._globalConfig.get("reloadAutomaticallyOnDataUpdatedRemotely", false);
+							showBlockerOnDataUpdatedRemotely = window._globalConfig.get("showBlockerOnDataUpdatedRemotely", true);
+						}
+
+						if (showBlockerOnDataUpdatedRemotely) {
+							this.jsonAjaxShowBlocker();
+							this.jsonAjaxStopCheckingRemoteModification();
+						}
+
+						if (reloadAutomaticallyOnDataUpdatedRemotely) {
+							this.jsonAjaxDisableBlockerButton();
+							setTimeout(()=>{
+								this.JsonAjaxInterface_onDataUpdatedRemotely();
+							}, 100);
+						}
 					}
 					this._lastModified = data.lastmodified;
 				}
@@ -121,6 +145,61 @@ window.JsonAjaxInterface = Object.extends({
 				
 			}.bind(this)
 		});
+	},
+
+
+	jsonAjaxShowBlocker: function() {
+		this.jsonAjaxEnableBlockerButton();
+		this.$blockerContainer.css({
+			display: "flex",
+		});
+	},
+	jsonAjaxHideBlocker: function() {
+		this.$blockerContainer.css({
+			display: "none",
+		});
+	},
+
+	jsonAjaxOnBlockerClick: function() {
+		this.jsonAjaxDisableBlockerButton();
+		setTimeout(()=>{
+			this.JsonAjaxInterface_onDataUpdatedRemotely();
+		}, 100);
+	},
+
+	jsonAjaxEnableBlockerButton: function() {
+		this.$blockerReloadButton.removeAttr("disabled");
+	},
+	jsonAjaxDisableBlockerButton: function() {
+		this.$blockerReloadButton.attr("disabled", "disabled");
+	},
+
+
+	jsonAjaxAddBlockerHtmlToPage: function() {
+		if (this.$blockerContainer) { return this.$blockerContainer; }
+		this.$blockerContainer = jQuery("#ReloadHandler_ActionBlocker");
+		if (this.$blockerContainer.length) { return this.$blockerContainer; }
+		this.$blockerContainer = jQuery("body").appendR('<div id="ReloadHandler_ActionBlocker">');
+		this.$blockerContainer.css({
+			position: "fixed",
+			display: "none",
+			top: 0, left: 0, bottom: 0, right: 0,
+			background: "black",
+		    "align-items": "center",
+		    "justify-content": "center",
+		});
+		const $subcont = this.$blockerContainer.appendR('<div class="subblockerContainer">');
+		$subcont.css({
+			"max-width": "80vw"
+		});
+		$subcont.appendR('<h3>').text('Reload needed');
+		$subcont.appendR('<p>').text('The data has changed on the server and the page needs to reload.');
+		this.$blockerReloadButton = $subcont.appendR('<button class="btn btn-inverse">').text('Reload now');
+		this.$blockerReloadButton.click(e => {
+			e.preventDefault(); e.stopPropagation();
+			this.jsonAjaxOnBlockerClick();
+		});
+		return this.$blockerContainer;
 	},
 
 	JsonAjaxInterface_afterDomReady: function(){

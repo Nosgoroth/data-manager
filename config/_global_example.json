@@ -9,4 +9,9 @@
 		"Mozilla/5.0 \\(Macintosh; Intel Mac OS X [\\d\\w_]+\\) AppleWebKit/"
 	],
 	"force_dark_mode_for_user_agent": [],
+
+	// Behavior for checking remote data modification
+	"intervalForDataUpdatedRemotelyCheckMs": 10000, // Set to -1 to disable (USE WITH CAUTION)
+	"reloadAutomaticallyOnDataUpdatedRemotely": false,
+	"showBlockerOnDataUpdatedRemotely": true,
 }
