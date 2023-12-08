@@ -182,9 +182,11 @@ window.JsonAjaxInterface = Object.extends({
 		this.$blockerContainer = jQuery("body").appendR('<div id="ReloadHandler_ActionBlocker">');
 		this.$blockerContainer.css({
 			position: "fixed",
+			"z-index": 10000,
 			display: "none",
 			top: 0, left: 0, bottom: 0, right: 0,
 			background: "black",
+			color: "white",
 		    "align-items": "center",
 		    "justify-content": "center",
 		});
