@@ -2741,6 +2741,8 @@
 				}
 			},
 			getRightstufSearchLink: function(volumeNumber) {
+				return null; // This website is dead
+				
 				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
 
