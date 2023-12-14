@@ -22,8 +22,12 @@ function transformIntoHeaderMap(array $headers) {
     return $headerMap;
 }
 function isGzipHeaderSet(array $headerMap) {
-    return isset($headerMap['Content-Encoding']) && 
-        $headerMap['Content-Encoding'] == 'gzip';
+	foreach ($headerMap as $key => $value) {
+		if (strtolower($key) === 'content-encoding' && strtolower($value) === "gzip") {
+			return true;
+		}
+	}
+    return false;
 }
 
 
