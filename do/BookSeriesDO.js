@@ -1076,7 +1076,7 @@
 				if (!asin || asin.startsWith("http") || asin.startsWith("//")) {
 					return null;
 				}
-				return "http://z2-ec2.images-amazon.com/images/P/"+asin+".01.MAIN._SCRM_.jpg";
+				return "http://ec2.images-amazon.com/images/P/"+asin+".01.MAIN._SCRM_.jpg";
 				return this.getImageAsin() || this.getAsin() || this.getSourceAsin();
 			},
 			getLargeCoverUrl: function(){
