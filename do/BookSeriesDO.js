@@ -354,6 +354,9 @@
 	function highestArrayValue(values) {
 		return values.reduce((p,c) => (p>c ? p : c), -Infinity);
 	}
+	function getDeviationFromPoint(values, average) {
+		return mean(values.map(x => Math.abs(x - average)));
+	}
 
 
 	function nextOcurrenceInList(momentArray) {
@@ -4027,6 +4030,8 @@
 				$form.appendR("<h3>").text(this.getName()).appendR("<em>").text(this.labelOfPublisher());
 
 				$form.appendR('<div id="pubgraphContainer">');
+				
+				// getDeviationFromPoint(values, average)
 
 
 				if (data.en.length > 1 || data.jp.length > 1) {
@@ -4034,39 +4039,62 @@
 					var $p = $form.appendR('<p>').appendR("<span>").text("Publish rate -- Average: ").back();
 
 					if (data.en.length > 1) {
-						var items = data.en.map(function(x){ return x[0]; }),
+						let items = data.en.map(function(x){ return x[0]; }),
 							dists = items.slice(1).map((v, i) => v - items[i]),
 							sum = dists.reduce(function(a, b) { return a + b; })
 							avg = (sum / dists.length) / (30*24*60*60*1000)
+							sdev_en = getDeviationFromPoint(dists, (sum / dists.length)) / (30*24*60*60*1000)
 							;
-						var unit = "months";
+						let unit = "mo";
 	    				if (avg > 12) {
 	    					avg /= 12;
-	    					unit = "years";
+	    					unit = "yr";
 	    				}
 						avg = Math.floor(avg*10)/10;
+						sdev_en = Math.floor(sdev_en*100)/100;
+						console.log("EN SDEV = "+sdev_en);
 
 						$p.appendR("<span>").text("EN ").back()
 							.appendR("<strong>").text(avg+" "+unit).back()
-							.appendR("<span>").text(" ")
+							.appendR("<span>").html(" &#9432; ")
+								.click(e => {
+									e.preventDefault(); e.stopPropagation();
+									alert(
+										"EXTRA INFORMATION:\n\n"
+										+"Average deviation from average for EN: "+sdev_en+" "+unit
+									);
+								})
+								.back()
 							;
 					}
 
 					if (data.jp.length > 1) {
-						var items = data.jp.map(function(x){ return x[0]; }),
+						let items = data.jp.map(function(x){ return x[0]; }),
 							dists = items.slice(1).map((v, i) => v - items[i]),
 							sum = dists.reduce(function(a, b) { return a + b; })
 							avg = sum / dists.length / (30*24*60*60*1000)
+							sdev = getDeviationFromPoint(dists, (sum / dists.length)) / (30*24*60*60*1000)
 							;
-						var unit = "months";
+						let unit = "mo";
 	    				if (avg > 12) {
 	    					avg /= 12;
-	    					unit = "years";
+	    					unit = "yr";
 	    				}
 						avg = Math.floor(avg*10)/10;
+						sdev = Math.floor(sdev*100)/100;
+						console.log("JP SDEV = "+sdev);
 
 						$p.appendR("<span>").text("JP ").back()
 							.appendR("<strong>").text(avg+" "+unit).back()
+							.appendR("<span>").html(" &#9432;")
+								.click(e => {
+									e.preventDefault(); e.stopPropagation();
+									alert(
+										"EXTRA INFORMATION:\n\n"
+										+"Average deviation from average for JP: "+sdev+" "+unit
+									);
+								})
+							.back()
 							;
 					}
 
@@ -4077,10 +4105,10 @@
 							dists = items.slice(1).map((v, i) => v - items[i]),
 							avg = indexWeightedMean(dists) / (30*24*60*60*1000)
 							;
-						var unit = "months";
+						var unit = "mo";
 	    				if (avg > 12) {
 	    					avg /= 12;
-	    					unit = "years";
+	    					unit = "yr";
 	    				}
 						avg = Math.floor(avg*10)/10;
 
@@ -4095,10 +4123,10 @@
 							dists = items.slice(1).map((v, i) => v - items[i]),
 							avg = indexWeightedMean(dists) / (30*24*60*60*1000)
 							;
-						var unit = "months";
+						var unit = "mo";
 	    				if (avg > 12) {
 	    					avg /= 12;
-	    					unit = "years";
+	    					unit = "yr";
 	    				}
 						avg = Math.floor(avg*10)/10;
 
@@ -4112,33 +4140,33 @@
 				if (data.leadtimes.length) {
 
     				var avg = mean(data.leadtimes) / (30*24*60*60);
-    				var unit = "months";
+    				var unit = "mo";
     				if (avg > 12) {
     					avg /= 12;
-    					unit = "years";
+    					unit = "yr";
     				}
     				avg = Math.floor(avg*10)/10;
 
     				var wavg = indexWeightedMean(data.leadtimes) / (30*24*60*60);
-    				var wunit = "months";
+    				var wunit = "mo";
     				if (wavg > 12) {
     					wavg /= 12;
-    					wunit = "years";
+    					wunit = "yr";
     				}
     				wavg = Math.floor(wavg*10)/10;
 
     				var min = lowestArrayValue(data.leadtimes) / (30*24*60*60);
-    				var minunit = "months";
+    				var minunit = "mo";
     				if (min > 12) {
     					min /= 12;
-    					minunit = "years";
+    					minunit = "yr";
     				}
     				min = Math.floor(min*10)/10;
     				var max = highestArrayValue(data.leadtimes) / (30*24*60*60);
-    				var maxunit = "months";
+    				var maxunit = "mo";
     				if (max > 12) {
     					max /= 12;
-    					maxunit = "years";
+    					maxunit = "yr";
     				}
     				max = Math.floor(max*10)/10;
 
