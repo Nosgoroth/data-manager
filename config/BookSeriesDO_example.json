@@ -23,6 +23,7 @@
 	],
 	
 	"statsDrawZeroes": true,
+	"preferSourceAsinForCover": false,
 
 	"graphSeriesDefaultState_jp": true,
 	"graphSeriesDefaultState_en": true,

@@ -1065,7 +1065,11 @@
 			},
 
 			getBestAsinForImage: function(){
-				return this.getImageAsin() || this.getAsin() || this.getSourceAsin();
+				if (BookSeriesDO.getConfigValue("preferSourceAsinForCover", false)) {
+					return this.getImageAsin() || this.getSourceAsin() || this.getAsin();
+				} else {
+					return this.getImageAsin() || this.getAsin() || this.getSourceAsin();
+				}
 			},
 			getBestAsinForLink: function(){
 				return this.getAsin() || this.getImageAsin() || this.getSourceAsin();
