@@ -5,6 +5,8 @@ if (file_exists('../../login.php')) {
 	require_once("../../login.php");
 }
 
+require_once("../../common.php");
+
 
 ?><!DOCTYPE html><html><head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -114,6 +116,34 @@ $fmt = $fmt ? $fmt : 0;
 
 <script type="text/javascript">
 	window._dataset = <?= json_encode(isset($_REQUEST["dataset"]) ? $_REQUEST["dataset"] : null) ?>;
+</script>
+
+<script type="text/javascript">
+	window._do_configs = {};
+	<?php
+		foreach(glob("../../config/*.json") as $configFile) {
+			try {
+				$fn = strtolower(basename($configFile, ".json"));
+				if (strpos($fn, '_example') !== false) {
+					continue;
+				}
+				$c = @file_get_contents($configFile);
+				$d = @json_clean_decode($c);
+				if (!$d) {
+					throw new Exception("Invalid JSON in config file $configFile");
+				}
+				?>
+				window._do_configs[<?= json_encode($fn) ?>] = <?= $c ?>;
+				console.log("Loaded config: "+<?= json_encode($fn) ?>);
+				<?php
+			} catch(Exception $e) {
+				// pass
+				?>
+				console.warn(<?= json_encode($e->getMessage()) ?>);
+				<?php
+			}
+		}
+	?>
 </script>
 <!-- Checker source -->
 <?php

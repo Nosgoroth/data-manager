@@ -21,6 +21,8 @@
 			"identifySourceActions": true, // default true
 		},
 	],
+	
+	"statsDrawZeroes": true,
 
 	"graphSeriesDefaultState_jp": true,
 	"graphSeriesDefaultState_en": true,

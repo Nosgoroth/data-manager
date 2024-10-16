@@ -2,6 +2,16 @@
 
 function instanceGraph(dateCols) {
 
+	if (BookSeriesDO.getConfigValue("statsDrawZeroes", false)) {
+		console.log("Filling zeroes");
+		try {
+			dateCols.bought.fillZeroes();
+			dateCols.read.fillZeroes();
+		} catch(e) {
+			console.log(e);
+		}
+	}
+	
 
 	const boughtDataYear = dateCols.bought.getGraphPointsByYear();
 	const readDataYear = dateCols.read.getGraphPointsByYear();
@@ -220,11 +230,16 @@ class VolumeCollectionIndex {
 	addKeyDate(key, date) {
 		this.keyDates[key] = date;
 	}
+	hasKey(key) {
+		return !!this.index[key];
+	}
 	add(item, key) {
 		if (!this.index[key]) {
 			this.index[key] = [];
 		}
-		this.index[key].push(item);
+		if (item) {
+			this.index[key].push(item);
+		}
 	}
 	getKeys() {
 		const keys = Object.keys(this.index);
@@ -276,6 +291,26 @@ class VolumeCollectionIndex {
 	getGraphPoints() {
 		return this.getKeys().map(k => this.getGraphPointAtKey(k));
 	}
+	
+	
+	fillZeroesInIndex(format, unit, _maxiter){ // like ("YYYY-MM", "month")
+		const max_iterations = _maxiter ? _maxiter : 1000;
+		const keys = this.getKeys(); // Returns sorted string array in the format YYYY-MM
+		const start = keys[0];
+		const end = keys[keys.length - 1];
+		let pointer = moment(start, format); // Parse key into date object
+		let pointerKey = start;
+		let iterationCount = 0;
+		while (pointerKey !== end && iterationCount < max_iterations){ // While exit condition depends on date library, ugh
+			if (!this.hasKey(pointerKey)) {
+				this.add(null, pointerKey);
+				this.addKeyDate(pointerKey, pointer);
+			}
+			pointer = moment(moment(pointer).add(1, unit)); // In-place modification
+			pointerKey = pointer.format(format); // To string
+			iterationCount += 1;
+		}
+	}
 }
 
 class VolumeCollectionByDate {
@@ -301,6 +336,11 @@ class VolumeCollectionByDate {
 
 		this.yearIndex.add(volumeDO, year);
 		this.yearIndex.addKeyDate(year, moment(_moment).startOf('year'));
+	}
+	
+	fillZeroes() {
+		this.monthIndex.fillZeroesInIndex("YYYY-MM", "months", 500);
+		this.yearIndex.fillZeroesInIndex("YYYY", "years", 100);
 	}
 
 	getMonthCounts() {
