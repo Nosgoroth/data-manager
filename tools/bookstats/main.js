@@ -414,6 +414,9 @@ window.bookSeriesAjaxInterface = Object.extends({
 			// bookSeriesDO._volumes = volumes;
 
 			volumes.forEach(volumeDO => {
+				if (volumeDO.isExcludeFromStats()) {
+					return;
+				}
 				dateCols.read.add(volumeDO, volumeDO.getReadDateMoment());
 				dateCols.read.add(volumeDO, volumeDO.getReadDateSourceMoment());
 				dateCols.bought.add(volumeDO, volumeDO.getPurchasedDateMoment());

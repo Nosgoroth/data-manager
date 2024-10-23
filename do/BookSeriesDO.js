@@ -581,6 +581,7 @@
 			mangaCalendarEnabled: "boolean",
 			manualPhysKindleCheckOnly: "boolean",
 			treatAsNotSequential: "boolean",
+			excludeFromStats: "boolean",
 			dontCheckForDelays: "boolean",
 		},
 		extraPrototype: {
