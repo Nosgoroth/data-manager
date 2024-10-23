@@ -583,6 +583,7 @@
 			treatAsNotSequential: "boolean",
 			excludeFromStats: "boolean",
 			dontCheckForDelays: "boolean",
+			ignoreIssues: "boolean"
 		},
 		extraPrototype: {
 
@@ -3117,7 +3118,11 @@
 				const seriesStatus = this.getStatus();
 				const store = this.getStore();
 
-				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Preorder && firstUnowned?.getReleaseDateMoment()?.isBefore(moment())) {
+				if (
+					firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Preorder
+					&& firstUnowned?.getReleaseDateMoment()?.isBefore(moment())
+					&& !firstUnowned?.isIgnoreIssues()
+					) {
 					if (store === BookSeriesDO.Enum.Store.Phys) {
 						return [
 							BookSeriesIssue.PrintPreorderAwaitingArrival,
@@ -3131,24 +3136,25 @@
 					}
 				}
 
-				if (firstUnowned?.isNoLocalStoreReferences()) {
+				if (firstUnowned?.isNoLocalStoreReferences() && !firstUnowned?.isIgnoreIssues()) {
 					return [
 						BookSeriesIssue.NoLocalStoreReferences,
 						firstUnowned
 					];
 				}
 
-				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Phys && store !== BookSeriesDO.Enum.Store.Phys) {
+				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Phys && store !== BookSeriesDO.Enum.Store.Phys && !firstUnowned?.isIgnoreIssues()) {
 					return [BookSeriesIssue.AwaitingDigitalVersion, firstUnowned];
 				}
 
-				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.StoreWait) {
+				if (firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.StoreWait && !firstUnowned?.isIgnoreIssues()) {
 					return [BookSeriesIssue.AwaitingStoreAvailability, firstUnowned];
 				}
 
 				if (
 					parseInt(firstUnowned?.getColorder()) === 1
 					&& seriesStatus === BookSeriesDO.Enum.Status.Announced
+					&& !firstUnowned?.isIgnoreIssues()
 				) {
 					const releaseDate = firstUnowned.getReleaseDateMoment();
 					const now = moment();
@@ -3160,6 +3166,7 @@
 				if (
 					firstUnownedStatus === BookSeriesVolumeDO.Enum.Status.Available
 					&& seriesStatus !== BookSeriesDO.Enum.Status.Backlog
+					&& !firstUnowned?.isIgnoreIssues()
 				) {
 					const releaseDate = firstUnowned.getReleaseDateMoment();
 					const now = moment();
@@ -3174,7 +3181,7 @@
 
 
 				const noLocalStoreVolume = this.isAnyVolumeNoLocalStoreReferences();
-				if (noLocalStoreVolume) {
+				if (noLocalStoreVolume && !noLocalStoreVolume?.isIgnoreIssues()) {
 					return [
 						BookSeriesIssue.NoLocalStoreReferences,
 						noLocalStoreVolume
@@ -3184,10 +3191,11 @@
 				const graphData = this.getPublicationGraphData();
 
 				const localVolumeOverdue = this.isLocalVolumeOverdue(graphData, options.localOverdueOffset);
-				if (localVolumeOverdue) {
+				const localVolumeOverdueVolume = localVolumeOverdue ? this.getVolumeWithOrder(localVolumeOverdue) : null;
+				if (localVolumeOverdueVolume && !localVolumeOverdueVolume?.isIgnoreIssues()) {
 					return [
 						BookSeriesIssue.LocalVolumeOverdue,
-						this.getVolumeWithOrder(localVolumeOverdue)
+						localVolumeOverdueVolume
 					];
 				}
 
@@ -3211,7 +3219,7 @@
 				}
 
 				const noSourceStoreVolume = this.isAnyVolumeNoSourceStoreReferences();
-				if (noSourceStoreVolume) {
+				if (noSourceStoreVolume && !noSourceStoreVolume?.isIgnoreIssues()) {
 					return [
 						BookSeriesIssue.NoSourceStoreReferences,
 						noSourceStoreVolume
@@ -3241,7 +3249,7 @@
 
 
 
-				if (firstUnownedSource && firstUnownedSource.getStatusSource() === BookSeriesVolumeDO.Enum.StatusSource.StoreWait) {
+				if (firstUnownedSource && firstUnownedSource.getStatusSource() === BookSeriesVolumeDO.Enum.StatusSource.StoreWait && !firstUnownedSource?.isIgnoreIssues()) {
 					return [BookSeriesIssue.AwaitingStoreAvailabilitySource, firstUnownedSource];
 				}
 
@@ -3267,6 +3275,7 @@
 
 				for (var i = 0; i < volumes.length; i++) {
 					const volume = volumes[i];
+					if (volume.isIgnoreIssues()) { continue; }
 					if (volume.getStatus() !== BookSeriesVolumeDO.Enum.Status.Source) {
 						continue;
 					}
