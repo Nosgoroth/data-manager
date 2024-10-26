@@ -410,6 +410,11 @@ window.bookSeriesAjaxInterface = Object.extends({
 		} catch(e) {}
 		
 		this._COL.forEach(bookSeriesDO => {
+			
+			if (bookSeriesDO.isExcludeFromStats()) {
+				return;
+			}
+			
 			const volumes = bookSeriesDO.getVolumes();
 			// bookSeriesDO._volumes = volumes;
 

@@ -2509,6 +2509,7 @@
 			hasNoSource: "boolean",
 			cancelledAtSource: "boolean",
 			dontCheckForDelays: "boolean",
+			excludeFromStats: "boolean",
 			highlight: "boolean",
 		},
 
