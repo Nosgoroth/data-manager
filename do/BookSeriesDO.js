@@ -1226,6 +1226,13 @@
 				if (c) { return c; }
 				return null;
 			},
+			getPurchasedOrReleaseDateMoment: function() {
+				const b = this.getPurchasedDateMoment();
+				if (b) { return b; }
+				const c = this.getReleaseDateMoment();
+				if (c) { return c; }
+				return null;
+			},
 			getPreorderOrPurchaseDateMoment: function() {
 				const preorderMoment = this.getPreorderDateMoment();
 				if (preorderMoment) { return preorderMoment; }
@@ -1247,6 +1254,13 @@
 				if (c) { return c; }
 				return null;
 			},
+			getPurchasedOrReleaseDateSourceMoment: function() {
+				const b = this.getPurchasedDateSourceMoment();
+				if (b) { return b; }
+				const c = this.getReleaseDateSourceMoment();
+				if (c) { return c; }
+				return null;
+			},
 			getPreorderOrPurchaseDateSourceMoment: function() {
 				const preorderMoment = this.getPreorderDateSourceMoment();
 				if (preorderMoment) { return preorderMoment; }
@@ -1254,6 +1268,14 @@
 				if (purchaseMoment) { return purchaseMoment; }
 				const c = this.getReleaseDateSourceMoment();
 				if (c) { return c; }
+				return null;
+			},
+			
+			getBestPurchasedOrReleaseDateMoment: function() {
+				const a = this.getPurchasedOrReleaseDateMoment();
+				if (a) { return a; }
+				const b = this.getPurchasedOrReleaseDateSourceMoment();
+				if (b) { return b; }
 				return null;
 			},
 
@@ -5232,6 +5254,7 @@
 						preorder: preorderVolumesCOL.length,
 						total: unreadOrAvailVolumesCOL.length + preorderVolumesCOL.length,
 						timeSince: moment().diff(volumeDO.getBestReleaseDateMoment(), 'months', true),
+						timeSinceBought: moment().diff(volumeDO.getBestPurchasedOrReleaseDateMoment(), 'months', true),
 						timeSinceLastRead: latestRead ? moment().diff(latestRead._dateReadMoment, 'months', true) : null,
 						timeSinceLatest: moment().diff(latestOwned.getBestReleaseDateMoment(), 'months', true),
 						caughtUp: (latestVolumeSource.getColorder() === latestOwned.getColorder() && !ignore.regular),
@@ -5283,8 +5306,8 @@
 						{
 							valid: true,
 							description: "The longer you've let it sit, the less likely you are to come back",
-							calculation: (Math.round(100*c.timeSince)/100)+" months * weight of "+weights.monthsSince,
-							value: (weights.monthsSince * c.timeSince),
+							calculation: (Math.round(100*c.timeSinceBought)/100)+" months * weight of "+weights.monthsSince,
+							value: (weights.monthsSince * c.timeSinceBought),
 						},
 						{
 							valid: true,
