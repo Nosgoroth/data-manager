@@ -5962,7 +5962,7 @@
 					"lastcheck", "lastupdate",
 					"publishedVolumes", "finishedPublication", "volumes", "forcednotes", "morenotes",
 					"link", "kindleSearchString", "kindleSearchStringSource", "ignoreIssues",
-					"koboSeriesId", "hasNoSource", "cancelledAtSource", "dontCheckForDelays", "highlight",
+					"koboSeriesId", "hasNoSource", "cancelledAtSource", "dontCheckForDelays", "highlight", "excludeFromStats",
 				]
 			},
 			
