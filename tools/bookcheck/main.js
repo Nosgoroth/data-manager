@@ -944,7 +944,6 @@ window.BookSeriesIssueItem = Object.extends({
 			case BookSeriesIssue.NoLocalStoreReferences:
 				actions = this.bookSeriesDO.getStoreSearchActions(this.volumeWithIssueDO?.getColorder());
 				break;
-			case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 			case BookSeriesIssue.WaitingForSource:
 			case BookSeriesIssue.SourceVolumeOverdue:
 			case BookSeriesIssue.CancelledAtSource:
@@ -954,6 +953,7 @@ window.BookSeriesIssueItem = Object.extends({
 				}
 				actions = actions.concat(this.volumeWithIssueDO?.getStoreLinkActions());
 				break;
+			case BookSeriesIssue.AwaitingStoreAvailabilitySource:
 			case BookSeriesIssue.NoSourceStoreReferences:
 				actions = this.bookSeriesDO.getSourceStoreSearchActions(this.volumeWithIssueDO.getColorder());
 				break;
