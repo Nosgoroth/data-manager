@@ -4948,7 +4948,7 @@
 							break;
 						case "week":
 						default:
-							monthkey = moment(_d).startOf('isoWeek').format("YYYY-WW");
+							monthkey = moment(_d).startOf('isoWeek').format("GGGG-WW");
 							break;
 					}
 
