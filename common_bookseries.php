@@ -132,7 +132,7 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		if ($pos === false) { return null; }
 		$substr = substr($this->raw, $pos);
 		$matches = null;
-		preg_match("/href=\"\/[^\/]+\/dp\/(B[\d\w]+)\//", $substr, $matches);
+		preg_match("/href=\"[^\"]*\/dp\/(B[\d\w]+)\//", $substr, $matches);
 		if (!$matches || count($matches) < 2) { return null; }
 		return $matches[1];
 	}
