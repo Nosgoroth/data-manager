@@ -2690,12 +2690,10 @@
 					const searchTerm = this.getSearchTerm(options.volumeNumber, false);
 					const searchTermSource = this.getSearchTerm(options.volumeNumber, true);
 					if (showForNonSource && searchTerm && options.showNonSource) {
-						searchActionLabel = options.searchActionLabel ?? x.getActionLabel(false);
-						actions.push(x.makeSearchAction(searchTerm, searchActionLabel, false));
+						actions.push(x.makeSearchAction(searchTerm, options.searchActionLabel, false));
 					}
 					if (showForSource && searchTermSource && options.showSource) {
-						searchActionLabel = options.searchActionLabel ?? x.getActionLabel(true);
-						actions.push(x.makeSearchAction(searchTermSource, searchActionLabel, true));
+						actions.push(x.makeSearchAction(searchTermSource, options.searchActionLabel, true));
 					}
 				});
 				return actions.filter(x => x?.url);
@@ -6238,15 +6236,19 @@ window.BookSeriesCustomSearchProvider = DataObjects.createDataObjectType({
 		getActionLabel: function(isSource) {
 			let label = this.getLabel("Search in %name%");
 			if (isSource && this.isIdentifySourceActions(true)) {
-				label += " (src)"
+				label += " (src)";
 			}
 			return label;
 		},
 		makeSearchAction: function(searchTerm, labelTemplate, isSource) {
+			if (labelTemplate && isSource && this.isIdentifySourceActions(true)) {
+				labelTemplate += " (src)";
+			}
 			labelTemplate = labelTemplate ?? this.getActionLabel(isSource);
+			let labelName = labelTemplate.replace("%name%", this.getName("Custom") );
 			return {
 				url: this.makeUrlForSearchTerm(searchTerm),
-				label: labelTemplate.replace("%name%",this.getName("Custom")),
+				label: labelName,
 				icon: this.getIcon("icon-search"),
 			};
 		},
