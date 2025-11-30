@@ -132,7 +132,7 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		if ($pos === false) { return null; }
 		$substr = substr($this->raw, $pos);
 		$matches = null;
-		preg_match("/href=\"\/[^\/]+\/dp\/(B[\d\w]+)\//", $substr, $matches);
+		preg_match("/href=\"[^\"]*\/dp\/(B[\d\w]+)\//", $substr, $matches);
 		if (!$matches || count($matches) < 2) { return null; }
 		return $matches[1];
 	}
@@ -173,7 +173,7 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 		        "header" => implode("\r\n", array(
 		        	"user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
 					"referer: https://${domain}/",
-					"Accept-Language: es,en-GB;q=0.9,en;q=0.8,ca;q=0.7,ja;q=0.6",
+					"Accept-Language: en-GB;q=0.9,en;q=0.7,ja;q=0.6",
 					"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
 		        	"Accept-Encoding: none",
 		        ))
@@ -214,7 +214,7 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 	function extractPubDate(){
 
 		$matchers = array(
-			array( "rx" => "/Publication Date[\s]*\:[\s]*\<\/span\>[\s]*\<span\>([\d\w\s]+, [\d]+)\</s", "cgindex" => 1 ),
+			array( "rx" => "/Publication Date[\s]*\:[\s]*\<\/span\>[\s]*\<span\>([\d\w\s]+, [\d]+)\</is", "cgindex" => 1 ),
 			array( "rx" => "/Publisher[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.* \(([\d\w\s]+, [\d]+)\)\</s", "cgindex" => 1 ),
 		);
 
