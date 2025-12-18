@@ -2742,11 +2742,17 @@
 				}
 			},
 			getGoogleKindleSearchLink: function(volumeNumber){
+				if (BookSeriesDO.getConfigValue("disable_google_search_nonsource", false)) {
+					return null;
+				}
 				var kss = this.getSearchTerm(volumeNumber);
 				if (!kss) { return null; }
 				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.com`; // TODO: Use domain from config
 			},
 			getGoogleKindleSearchLinkSource: function(volumeNumber){
+				if (BookSeriesDO.getConfigValue("disable_google_search_source", false)) {
+					return null;
+				}
 				var kss = this.getSearchTerm(volumeNumber, true);
 				if (!kss) { return null; }
 				return `https://www.google.com/search?hl=en&q=${ encodeURIComponent(kss) }+site%3Aamazon.co.jp`; // TODO: Use domain from config

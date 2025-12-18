@@ -22,6 +22,9 @@
 		},
 	],
 	
+	"disable_google_search_nonsource": false,
+	"disable_google_search_source": false,
+	
 	"statsDrawZeroes": true,
 	"preferSourceAsinForCover": false,
 
