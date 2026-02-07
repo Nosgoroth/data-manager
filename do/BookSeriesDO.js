@@ -4068,7 +4068,14 @@
 
 				var $form = jQuery('<div class="pubgraphPopup">');
 
-				$form.appendR("<h3>").text(this.getName()).appendR("<em>").text(this.labelOfPublisher());
+				$formTitle = $form.appendR("<h3>");
+				
+				$formTitle.text(this.getName()).appendR("<em>").text(this.labelOfPublisher());
+				
+				$formTitle.click(e => {
+					e.preventDefault(); e.stopPropagation();
+					$form.toggleClass("full-size");
+				});
 
 				$form.appendR('<div id="pubgraphContainer">');
 				
