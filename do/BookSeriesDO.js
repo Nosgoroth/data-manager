@@ -75,7 +75,7 @@
 
 		Shortcut for filling the volumes of a series: Paste into the volumes field of the series (which would normally contain raw json) a list of volumes, one per line, in the following format:
 
-		colorder;asin;status;sourceasin;otherasin;orderlabel;koboId;sourceStatus
+		colorder;asin;status;sourceasin;otherasin;orderlabel;koboId;sourceStatus;releaseDate;sourceReleaseDate
 
 		As a reminder
 			[Status] Read = 1, Backlog = 2, Phys = 4, Source = 6, Available = 7
@@ -88,7 +88,15 @@
 		3;B08TYF1MNV;6;;;III
 		4;B08KYGV773;6;;;IV
 
+		Common patterns:
+
+		1;asin;7;sourceAsin;;;koboId;;releaseDate;sourceReleaseDate
+		2;asin;4;sourceAsin;;;koboId;;releaseDate;sourceReleaseDate
+		3;sourceAsin;6;;;;;;sourceReleaseDate
+
 		This is parsed in the constructor for BookSeriesVolumeDO
+		
+		Date format is DD/MM/YYYY
 
 		WARNING: The enum values for sourceStatus are different! Yes, I know that's not great.
 
@@ -628,6 +636,8 @@
 					this._rawdata.orderLabel = rawdata[5] ? rawdata[5].trim() : window.undefined;
 					this._rawdata.koboId = rawdata[6] ? rawdata[6].trim() : window.undefined;
 					this._rawdata.statusSource = rawdata[7] ? this.statusSourceFromString(rawdata[7].trim()) : window.undefined;
+					this._rawdata.releaseDate = rawdata[8] ? rawdata[8].trim() : window.undefined;
+					this._rawdata.releaseDateSource = rawdata[9] ? rawdata[9].trim() : window.undefined;
 				}
 
 				this.options = populateDefaultOptions(options, {
