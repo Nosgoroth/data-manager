@@ -39,15 +39,25 @@ abstract class BaseScraper {
 	protected $id;
 	protected $debug_namespace = "";
 	protected $debug_directory = "scraper_debug";
-	protected $debug_output_ttl = 60*30; //seconds
+	protected $debug_output_ttl = 60*60*24; //seconds
 	protected $configHandler = null;
+	protected $useCache = true;
 
 	function __construct($id) {
 		$this->id = $id;
 		$this->configHandler = new ConfigHandler("BookSeriesDO");
 	}
 
-	abstract public function read($debug = false);
+	
+	
+	public function read($debug = false) {
+		if ($this->useCache && $this->hasValidRawCache()) {
+			$this->readRawFromCache();
+			return;
+		}
+		$this->readImpl($debug);
+	}
+	abstract protected function readImpl($debug = false);
 
 	// Debug output functionality
 
@@ -71,16 +81,39 @@ abstract class BaseScraper {
 	protected function writeRawToFile() {
 		$this->checkRawOutputDirectory();
 		$this->deleteOldRawOutput();
-		file_put_contents($this->debug_directory."/".$this->getRawOutputFilename(), $this->raw);
+		file_put_contents($this->getRawCachePath(), $this->raw);
+	}
+	protected function getRawCachePath() {
+		return $this->debug_directory."/".$this->getRawOutputFilename();
+	}
+	public function readRawFromCache() {
+		$this->raw = file_get_contents($this->getRawCachePath());
+	}
+	protected function hasValidRawCache() {
+		$path = $this->getRawCachePath();
+		return file_exists($path) && (@filemtime($path)+$this->debug_output_ttl < time());
+	}
+	protected function hasRawCache() {
+		return file_exists($this->getRawCachePath());
 	}
 }
 
 abstract class BaseAmazonScraper extends BaseScraper {
-	abstract public function extractPubDate();
 
 	protected $extractKindleAsinMethods = [];
-	function extractKindleAsin() {
+	public function extractKindleAsin() {
 		foreach ($this->extractKindleAsinMethods as $methodName) {
+			$retval = $this->$methodName();
+			if ($retval) {
+				return $retval;
+			}
+		}
+		return null;
+	}
+	
+	protected $extractPubDateMethods = [];
+	public function extractPubDate() {
+		foreach ($this->extractPubDateMethods as $methodName) {
 			$retval = $this->$methodName();
 			if ($retval) {
 				return $retval;
@@ -99,8 +132,12 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		"extractKindleAsin_v1",
 		"extractKindleAsin_v2",
 	];
+	protected $extractPubDateMethods = [
+		"extractPubDate_v1",
+		"extractPubDate_v2"
+	];
 
-	function read($debug = false) {
+	protected function readImpl($debug = false) {
 		//return;
 		$domain = $this->configHandler->get("amazon_jp_domain_scraper", "www.amazon.co.jp");
 		$this->raw = file_get_contents("https://${domain}/gp/product/".$this->id.'?language=ja_JP');
@@ -137,9 +174,19 @@ class AmazonJpAsinScraper extends BaseAmazonScraper {
 		return $matches[1];
 	}
 
-	function extractPubDate(){
+	function extractPubDate_v1(){
 		mb_internal_encoding('UTF-8');
-		preg_match("/出版社[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.*[\s]\(([\d\/]+)\)\</s", $this->raw, $matches);
+		preg_match("/(?:出版社|発売日)[\s]*\:[\s]*\<\/span\>[\s]*\<span\>.*[\s]\(([\d\/]+)\)\</s", $this->raw, $matches);
+		if (count($matches) > 1) {
+			return $matches[1];
+		} else {
+			return null;
+		}
+	}
+
+	function extractPubDate_v2(){
+		mb_internal_encoding('UTF-8');
+		preg_match("/(?:出版社|発売日)\s*\:\s*\<\/span\>\s*\<span\>\s*([\d\/]+)\s*\</s", $this->raw, $matches);
 		if (count($matches) > 1) {
 			return $matches[1];
 		} else {
@@ -165,7 +212,7 @@ class AmazonComAsinScraper extends BaseAmazonScraper {
 		"extractKindleAsin_v2",
 	];
 
-	function read($debug = false) {
+	protected function readImpl($debug = false) {
 		$domain = $this->configHandler->get("amazon_en_domain_scraper", "www.amazon.com");
 		$this->raw = file_get_contents("https://${domain}/dp/".$this->id, false, stream_context_create(array(
 			"http" => array(
@@ -253,7 +300,7 @@ class KoboScraper extends BaseScraper {
 
 	protected $debug_namespace = "kobo";
 
-	function read($debug = false) {
+	protected function readImpl($debug = false) {
 		$domain = $this->configHandler->get("kobo_domain_scraper", "https://www.kobo.com/es/en");
 		$this->raw = file_get_contents("${domain}/ebook/".$this->id, false, stream_context_create(array(
 			"http" => array(
